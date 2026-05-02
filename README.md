@@ -1,4 +1,4 @@
-# Vela Next
+# Vela
 
 Vela is a small dashboard prototype for palm oil procurement planning in Riau, Indonesia.
 
