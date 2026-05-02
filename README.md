@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vela Next
 
-## Getting Started
+Vela is a small dashboard prototype for palm oil procurement planning in Riau, Indonesia.
 
-First, run the development server:
+It shows:
+
+- district crop health and dispatch status
+- weekly recommendations by district
+- CPO price trends
+- basic workspace and team settings
+
+The app is built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
+
+## Running locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The root route redirects to `/overview`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Available scripts
 
-## Learn More
+```bash
+npm run dev
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/overview` shows the main procurement dashboard with KPIs, the Riau map, recommendation cards, and the price chart
+- `/districts` shows a sortable table for district-level crop and dispatch data
+- `/prices` shows CPO price history and trend signals
+- `/settings` shows sample workspace preferences and team access
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project structure
 
-## Deploy on Vercel
+```text
+app/
+  (dashboard)/
+    overview/
+    districts/
+    prices/
+    settings/
+components/
+lib/
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `app/` contains the routes and layouts
+- `components/` contains the sidebar, map, chart, cards, and status UI
+- `lib/data.ts` contains the mock district, map, mill, user, and price data
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- This project currently uses local mock data only
+- There is no backend or database wired up yet
+- `vercel.json` is included for deployment on Vercel
