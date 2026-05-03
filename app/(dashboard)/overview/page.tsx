@@ -158,7 +158,19 @@ export default function OverviewPage() {
                     onClick={() => districts[0] && setSelected(districts[0].id)}
                   >
                     <span>{copy.label}</span>
-                    <strong>{districts.length ? formatDistrictList(districts.map((district) => district.name)) : 'None'}</strong>
+                    <strong>
+                      {districts.length
+                        ? districts.map((district, i) => (
+                            <span key={district.id}>
+                              {i > 0 && ', '}
+                              {district.name}
+                              <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)', marginLeft: 5 }}>
+                                · <span className="mono">{district.confidence}%</span>
+                              </span>
+                            </span>
+                          ))
+                        : 'None'}
+                    </strong>
                     <small>{copy.instruction}</small>
                   </button>
                 );

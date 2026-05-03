@@ -5,7 +5,7 @@ import Sidebar from '@/components/sidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const tab = pathname.split('/')[1] as 'overview' | 'districts' | 'prices' | 'settings';
+  const tab = pathname.split('/')[1] as 'overview' | 'settings';
 
   return (
     <div className="app">

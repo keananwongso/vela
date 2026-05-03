@@ -13,6 +13,7 @@ export interface District {
   ffa: string;
   trucks: number;
   eta: string;
+  confidence: number;
 }
 
 export interface CpoPoint {
@@ -47,6 +48,7 @@ export const DISTRICTS: District[] = [
     ffa: '2.1%',
     trucks: 6,
     eta: '14 hrs',
+    confidence: 82,
   },
   {
     id: 'pelalawan',
@@ -61,6 +63,7 @@ export const DISTRICTS: District[] = [
     ffa: '3.0%',
     trucks: 2,
     eta: '—',
+    confidence: 61,
   },
   {
     id: 'inhu',
@@ -75,6 +78,7 @@ export const DISTRICTS: District[] = [
     ffa: '4.6%',
     trucks: 0,
     eta: '—',
+    confidence: 43,
   },
   {
     id: 'rohil',
@@ -89,6 +93,7 @@ export const DISTRICTS: District[] = [
     ffa: '2.4%',
     trucks: 4,
     eta: '18 hrs',
+    confidence: 71,
   },
   {
     id: 'siak',
@@ -103,6 +108,7 @@ export const DISTRICTS: District[] = [
     ffa: '2.2%',
     trucks: 3,
     eta: '12 hrs',
+    confidence: 68,
   },
 ];
 

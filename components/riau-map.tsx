@@ -191,6 +191,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
           <div className="callout-row"><span>Moisture</span><span className="callout-val mono">{selectedDistrict.moisture}</span></div>
           <div className="callout-row"><span>Free fatty acid</span><span className="callout-val mono">{selectedDistrict.ffa}</span></div>
           <div className="callout-row"><span>Trucks staged</span><span className="callout-val mono">{selectedDistrict.trucks}</span></div>
+          <div className="callout-row"><span>Confidence</span><span className="callout-val mono">{selectedDistrict.confidence}%</span></div>
         </div>
       )}
     </div>
