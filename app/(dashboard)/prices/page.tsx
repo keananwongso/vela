@@ -103,11 +103,11 @@ export default function PricesPage() {
                   <td style={{ fontWeight: p.current ? 600 : 500 }}>
                     {p.week}
                     {p.current && (
-                      <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--accent)' }}>● now</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--healthy)' }}>● now</span>
                     )}
                   </td>
                   <td className="mono">{fmt(p.price)}</td>
-                  <td className="mono" style={{ color: delta >= 0 ? 'var(--green-ink)' : 'var(--red-ink)' }}>
+                  <td className="mono" style={{ color: delta >= 0 ? 'var(--healthy)' : 'var(--risk)' }}>
                     {i === 0 ? '—' : `${delta >= 0 ? '▲ +' : '▼ '}${fmt(Math.abs(delta))} (${pct.toFixed(1)}%)`}
                   </td>
                   <td>

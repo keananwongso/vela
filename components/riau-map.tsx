@@ -5,13 +5,13 @@ import { MAP_REGIONS, DISTRICTS, STATUS_LABELS, type StatusKey } from '@/lib/dat
 import StatusBadge from './status-badge';
 
 const FILL: Record<string, string> = {
-  green: '#3D8B6E',
-  amber: '#C97B2A',
-  red:   '#C0392B',
+  green: 'var(--healthy)',
+  amber: 'var(--monitor)',
+  red:   'var(--risk)',
 };
 
 function fillFor(status: StatusKey | null) {
-  return status ? FILL[status] : '#DCE1DE';
+  return status ? FILL[status] : 'var(--border)';
 }
 
 function statusHint(status: StatusKey | null) {
@@ -61,7 +61,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
 
         <path
           d="M 180 165 L 200 130 L 290 75 L 380 95 L 470 70 L 560 60 L 640 80 L 700 110 L 780 105 L 815 135 L 800 170 L 760 195 L 730 340 L 760 395 L 720 425 L 640 425 L 580 405 L 530 405 L 470 420 L 400 410 L 290 410 L 230 395 L 200 360 L 200 280 Z"
-          fill="#EDF1EE" stroke="#CFD6D2" strokeWidth="1" filter="url(#softShadow)"
+          fill="var(--canvas)" stroke="var(--border)" strokeWidth="1" filter="url(#softShadow)"
         />
 
         {MAP_REGIONS.map((r) => (
@@ -104,9 +104,9 @@ export default function RiauMap({ selected, setSelected }: Props) {
         ))}
 
         <g transform="translate(820, 410)">
-          <circle r="18" fill="#fff" stroke="#D2D7D4" />
-          <path d="M 0 -10 L 3 0 L 0 10 L -3 0 Z" fill="#0F1A1F" />
-          <text y="-22" textAnchor="middle" fontSize="10" fill="#5A6B72" fontWeight="600">N</text>
+          <circle r="18" fill="var(--surface)" stroke="var(--border)" />
+          <path d="M 0 -10 L 3 0 L 0 10 L -3 0 Z" fill="var(--ink)" />
+          <text y="-22" textAnchor="middle" fontSize="10" fill="var(--muted)" fontWeight="600">N</text>
         </g>
       </svg>
 
@@ -122,11 +122,11 @@ export default function RiauMap({ selected, setSelected }: Props) {
 
       <div className="legend">
         <h4>Crop health · Apr 21</h4>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: '#3D8B6E' }} />Healthy — dispatch now</div>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: '#C97B2A' }} />Moderate — monitor</div>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: '#C0392B' }} />At risk — hold</div>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--healthy)' }} />Healthy — dispatch now</div>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--monitor)' }} />Moderate — monitor</div>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--risk)' }} />At risk — hold</div>
         <div className="legend-row" style={{ marginTop: 4, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-          <span className="legend-swatch" style={{ background: '#DCE1DE' }} />No active recommendation
+          <span className="legend-swatch" style={{ background: 'var(--border)' }} />No active recommendation
         </div>
       </div>
 

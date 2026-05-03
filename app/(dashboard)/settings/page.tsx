@@ -22,7 +22,7 @@ export default function SettingsPage() {
       <section className="section">
         <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Procurement preferences</h2>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
             Applies to all dispatch recommendations for PT Sawit Riau
           </div>
         </div>
@@ -39,10 +39,10 @@ export default function SettingsPage() {
               alignItems: 'center',
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>{row.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'color-mix(in srgb, var(--ink) 84%, var(--surface))' }}>{row.label}</div>
             <div>
               <div style={{ fontSize: 13.5, fontWeight: 500 }}>{row.val}</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{row.sub}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{row.sub}</div>
             </div>
             <button className="btn">Edit</button>
           </div>
@@ -57,7 +57,7 @@ export default function SettingsPage() {
       <section className="section">
         <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Team</h2>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
             Members with access to this workspace
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function SettingsPage() {
           >
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
-              background: 'var(--accent-soft)', color: 'var(--accent)',
+              background: 'color-mix(in srgb, var(--brand) 12%, var(--surface))', color: 'var(--brand)',
               display: 'grid', placeItems: 'center',
               fontSize: 12, fontWeight: 600,
             }}>
@@ -86,7 +86,7 @@ export default function SettingsPage() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{m.role}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.role}</div>
             </div>
             <span className="badge muted">{m.access}</span>
             <button className="btn">Manage</button>

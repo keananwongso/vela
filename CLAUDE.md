@@ -116,19 +116,19 @@ Weekly cron (n8n)
 
 ## Design System
 
-**Single green rule:** There is only one green in this entire app. Do not introduce any other shade of green.
+**Color role rule:** `brand` is for UI actions only. `healthy` is for data signals only. Do not use `healthy` decoratively.
 
 | Token | Value | Usage |
 |---|---|---|
-| Brand green | `#3D8B6E` | Healthy status, positive indicators, primary button, active nav |
-| Monitor amber | `#C97B2A` | Moderate/monitor status |
+| Ink | `#0F1A1F` | Primary text, dark sidebar background, tooltip background |
+| Brand | `#1A5C3A` | UI actions only: primary buttons, active nav, logo, CTAs |
+| Canvas | `#F5F3EE` | Warm off-white main content area |
+| Healthy | `#4A7A5A` | Data signals only: healthy status, positive deltas, map districts, chart series |
+| Monitor | `#C68A0E` | Moderate/monitor status |
 | At risk red | `#C0392B` | At risk status |
-| Sidebar bg | `#0D1F1A` | Dark sidebar background |
-| Sidebar active | `#1A3D2E` | Active nav item highlight |
-| Main bg | `#F7F8F6` | Warm off-white main content area |
 | Card surface | `#FFFFFF` | Card backgrounds |
-| Border | `#E4E8E3` | All borders and dividers |
-| Secondary text | `#6B7280` | Labels, metadata, secondary copy |
+| Border | `#E2DDD6` | All borders and dividers |
+| Muted | `#6B7A72` | Labels, metadata, secondary copy |
 
 **Typography:**
 - Display headers (`Procurement overview`, section titles): `Instrument Serif`
@@ -227,7 +227,8 @@ Weekly cron (n8n)
 - Use `JetBrains Mono` for every number on screen without exception.
 - No lorem ipsum or placeholder text anywhere visible in the app.
 - All four tabs must be fully navigable with no blank screens.
-- There is only one green: `#3D8B6E`. Do not add any other green.
-- The CPO chart fill area should be very subtle: `#3D8B6E12`.
+- Use `brand` (`#1A5C3A`) for UI actions only: buttons, active nav, logo, CTAs.
+- Use `healthy` (`#4A7A5A`) for data signals only: badges, map districts, positive deltas, chart data. Never decorative.
+- The CPO chart fill area should be very subtle and derived from `healthy`.
 - The map must use real Riau GeoJSON boundaries, not abstract polygons.
 - The app must be Vercel-ready with no build errors.

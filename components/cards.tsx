@@ -41,15 +41,15 @@ export default function RecommendationCards({ selected, setSelected }: Props) {
           <div className="card-price">
             <span>
               CPO <span className="mono">{fmtIDR(d.cpo)}</span>{' '}
-              <span style={{ color: 'var(--ink-3)' }}>IDR/kg</span>
+              <span style={{ color: 'var(--muted)' }}>IDR/kg</span>
             </span>
             <span>
               {d.cpoNote === 'favorable' ? (
-                <span style={{ color: 'var(--green-ink)', fontFamily: 'inherit', fontSize: 11.5 }}>
+                <span style={{ color: 'var(--healthy)', fontFamily: 'inherit', fontSize: 11.5 }}>
                   <span style={{ fontSize: 8, verticalAlign: 'middle', marginRight: 4 }}>●</span>favorable
                 </span>
               ) : (
-                <span style={{ color: 'var(--amber-ink)', fontFamily: 'inherit', fontSize: 11.5 }}>
+                <span style={{ color: 'var(--monitor)', fontFamily: 'inherit', fontSize: 11.5 }}>
                   <span style={{ fontSize: 8, verticalAlign: 'middle', marginRight: 4 }}>●</span>caution
                 </span>
               )}

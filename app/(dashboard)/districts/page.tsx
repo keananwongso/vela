@@ -94,8 +94,8 @@ export default function DistrictsPage() {
                 <td className="mono">{d.moisture}</td>
                 <td className="mono">{d.ffa}</td>
                 <td className="mono">{d.trucks}</td>
-                <td className="mono" style={{ color: 'var(--ink-3)' }}>{d.eta}</td>
-                <td style={{ color: 'var(--ink-2)' }}>{d.action}</td>
+                <td className="mono" style={{ color: 'var(--muted)' }}>{d.eta}</td>
+                <td style={{ color: 'color-mix(in srgb, var(--ink) 84%, var(--surface))' }}>{d.action}</td>
               </tr>
             ))}
           </tbody>
