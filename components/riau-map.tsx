@@ -32,6 +32,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const selectedDistrict = DISTRICTS.find((d) => d.id === selected);
+  const selectableDistrictIds = new Set(DISTRICTS.map((district) => district.id));
 
   function onMove(e: React.MouseEvent, r: typeof MAP_REGIONS[0]) {
     const rect = wrapRef.current!.getBoundingClientRect();
@@ -68,11 +69,13 @@ export default function RiauMap({ selected, setSelected }: Props) {
           <path
             key={r.id}
             d={r.d}
-            className={`map-region${selected === r.id ? ' selected' : ''}`}
+            className={`map-region${selected === r.id ? ' selected' : ''}${selectableDistrictIds.has(r.id) ? '' : ' inactive'}`}
             fill={fillFor(r.status)}
             fillOpacity={r.status ? 0.92 : 1}
             onMouseMove={(e) => onMove(e, r)}
-            onClick={() => setSelected(r.id)}
+            onClick={() => {
+              if (selectableDistrictIds.has(r.id)) setSelected(r.id);
+            }}
           />
         ))}
 

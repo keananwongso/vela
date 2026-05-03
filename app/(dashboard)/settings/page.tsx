@@ -1,6 +1,31 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { DISTRICTS } from '@/lib/data';
+import { isOverviewViewMode, OVERVIEW_VIEW_STORAGE_KEY, type OverviewViewMode } from '@/lib/view-mode';
 
 export default function SettingsPage() {
+  const [defaultView, setDefaultView] = useState<OverviewViewMode>('simple');
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(OVERVIEW_VIEW_STORAGE_KEY);
+      if (isOverviewViewMode(stored)) setDefaultView(stored);
+    } catch {
+      // Keep the default select usable even if persistence is blocked.
+    }
+  }, []);
+
+  function updateDefaultView(nextView: OverviewViewMode) {
+    setDefaultView(nextView);
+
+    try {
+      window.localStorage.setItem(OVERVIEW_VIEW_STORAGE_KEY, nextView);
+    } catch {
+      // The visible preference still updates for this session if storage is blocked.
+    }
+  }
+
   return (
     <>
       <div className="topbar">
@@ -32,6 +57,21 @@ export default function SettingsPage() {
               ))}
             </select>
             <div className="settings-help">Visible on Overview map</div>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-label">Default view</div>
+          <div>
+            <select
+              className="settings-control"
+              value={defaultView}
+              onChange={(event) => updateDefaultView(event.target.value as OverviewViewMode)}
+            >
+              <option value="simple">Simple</option>
+              <option value="terminal">Terminal</option>
+            </select>
+            <div className="settings-help">Used when opening the Overview tab</div>
           </div>
         </div>
 
