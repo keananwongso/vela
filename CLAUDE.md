@@ -132,8 +132,8 @@ Weekly cron (n8n)
 
 **Typography:**
 - Display headers (`Procurement overview`, section titles): `Instrument Serif`
-- Body and UI text (nav, labels, card body): `Inter`
-- All numeric data values (prices, percentages, tonnage): `JetBrains Mono`
+- Body and UI text (nav, labels, card body): `IBM Plex Sans`
+- All numeric data values (prices, percentages, tonnage): `IBM Plex Mono`
 
 ---
 
@@ -224,7 +224,7 @@ Weekly cron (n8n)
 ## Important Rules for Claude Code
 
 - All data lives in `data.ts` as typed constants. No API calls yet.
-- Use `JetBrains Mono` for every number on screen without exception.
+- Use `IBM Plex Mono` for every number on screen without exception.
 - No lorem ipsum or placeholder text anywhere visible in the app.
 - All four tabs must be fully navigable with no blank screens.
 - Use `brand` (`#1A5C3A`) for UI actions only: buttons, active nav, logo, CTAs.

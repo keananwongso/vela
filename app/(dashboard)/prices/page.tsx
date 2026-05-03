@@ -5,6 +5,12 @@ import { CPO_SERIES } from '@/lib/data';
 import PriceChart from '@/components/chart';
 
 const CHART_TABS = ['4w', '8w', '26w', '52w'] as const;
+const WEEKS_BY_TAB: Record<(typeof CHART_TABS)[number], number> = {
+  '4w': 4,
+  '8w': 8,
+  '26w': 26,
+  '52w': 52,
+};
 
 function fmt(n: number) {
   return n.toLocaleString('en-US');
@@ -16,6 +22,9 @@ export default function PricesPage() {
   const cur = CPO_SERIES[CPO_SERIES.length - 1];
   const last4 = CPO_SERIES.slice(-4).reduce((s, p) => s + p.price, 0) / 4;
   const last8avg = CPO_SERIES.reduce((s, p) => s + p.price, 0) / CPO_SERIES.length;
+  const weeksToShow = WEEKS_BY_TAB[chartTab];
+  const visibleSeries = CPO_SERIES.slice(-Math.min(weeksToShow, CPO_SERIES.length));
+  const showingAllAvailable = weeksToShow > CPO_SERIES.length;
 
   return (
     <>
@@ -56,8 +65,11 @@ export default function PricesPage() {
       <section className="section">
         <div className="section-head">
           <div>
-            <h2>CPO price trend · 8 weeks</h2>
-            <div className="meta">Source: Bursa Malaysia Derivatives, Dumai port spot conversion</div>
+            <h2>CPO price trend · {chartTab}</h2>
+            <div className="meta">
+              Source: Bursa Malaysia Derivatives, Dumai port spot conversion
+              {showingAllAvailable ? ' (showing all available data)' : ''}
+            </div>
           </div>
           <div className="right">
             <div className="tabs">
@@ -69,7 +81,7 @@ export default function PricesPage() {
             </div>
           </div>
         </div>
-        <PriceChart />
+        <PriceChart series={visibleSeries} />
         <div className="foot">
           <span>Source: Dumai port spot · Bursa Malaysia Derivatives</span>
           <span>Updated Apr 21, 2026 · 14:38 WIB</span>

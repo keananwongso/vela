@@ -1,7 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
+  --font-display: 'Instrument Serif', serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
   --ink:     #0F1A1F;
   --brand:   #1A5C3A;
   --canvas:  #F5F3EE;
@@ -21,7 +23,7 @@
 html, body { margin: 0; padding: 0; height: 100%; }
 
 body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   color: var(--ink);
   background: var(--canvas);
@@ -31,7 +33,7 @@ body {
 }
 
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-feature-settings: "zero";
 }
 
@@ -84,6 +86,7 @@ body {
 .sidebar-brand .tag {
   margin-left: auto;
   color: color-mix(in srgb, var(--surface) 48%, transparent);
+  font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -137,7 +140,7 @@ body {
   margin-left: auto;
   font-size: 11px;
   color: color-mix(in srgb, var(--surface) 48%, transparent);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .sidebar-foot {
@@ -186,9 +189,11 @@ body {
   margin-bottom: 6px;
 }
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.05;
   margin: 0;
   color: var(--ink);
 }
@@ -252,6 +257,7 @@ body {
   text-transform: uppercase;
 }
 .kpi .val {
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 600;
   margin-top: 4px;
@@ -290,9 +296,11 @@ body {
 }
 .section-head h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
   letter-spacing: 0;
+  line-height: 1.05;
   color: var(--ink);
 }
 .section-head .meta {
@@ -408,7 +416,7 @@ body {
 }
 .map-callout .callout-row:last-child { border-bottom: 0; }
 .map-callout .callout-val {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--ink);
 }
 .map-callout .callout-sub {
@@ -539,7 +547,7 @@ body {
   color: var(--muted);
 }
 .rec-card .mini .num {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--ink);
   font-size: 13px;
   font-weight: 500;
@@ -566,7 +574,7 @@ body {
   font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 .chart-stat .unit { color: var(--muted); font-size: 13px; }
 .chart-stat .delta { font-size: 12.5px; font-weight: 500; }
@@ -624,3 +632,50 @@ body {
 }
 .data-table tbody tr td:first-child { padding-left: 18px; font-weight: 600; color: var(--ink); }
 .data-table tbody tr td:last-child { padding-right: 18px; }
+
+/* Settings */
+.settings-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.settings-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--ink) 84%, var(--surface));
+}
+.settings-control {
+  width: min(100%, 320px);
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  padding: 0 10px;
+}
+.settings-help {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 1024px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi:nth-child(2) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

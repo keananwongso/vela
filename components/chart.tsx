@@ -110,7 +110,7 @@ export default function PriceChart({ series = CPO_SERIES }: { series?: CpoPoint[
         {ticks.map((v) => (
           <g key={v}>
             <line x1={PAD_L} y1={yFn(v)} x2={W - PAD_R} y2={yFn(v)} stroke="var(--border)" strokeWidth="1" />
-            <text x={PAD_L - 10} y={yFn(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" fontFamily="JetBrains Mono, monospace">
+            <text x={PAD_L - 10} y={yFn(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" fontFamily="var(--font-mono)">
               {fmt(v)}
             </text>
           </g>
@@ -151,7 +151,7 @@ export default function PriceChart({ series = CPO_SERIES }: { series?: CpoPoint[
                 />
                 <g transform={`translate(${xFn(i)},${yFn(p.price) - 14})`}>
                   <rect x="-32" y="-18" width="64" height="20" rx="4" fill="var(--ink)" />
-                  <text textAnchor="middle" y="-4" fontSize="11" fill="var(--surface)" fontFamily="JetBrains Mono, monospace" fontWeight="500">
+                  <text textAnchor="middle" y="-4" fontSize="11" fill="var(--surface)" fontFamily="var(--font-mono)" fontWeight="500">
                     {fmt(p.price)}
                   </text>
                 </g>

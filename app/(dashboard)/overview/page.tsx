@@ -27,7 +27,7 @@ export default function OverviewPage() {
         <div>
           <div className="crumb">Riau Province · Week 17 · Apr 15 – Apr 21, 2026</div>
           <h1 className="page-title">Procurement overview</h1>
-          <div className="page-sub">Dispatch decisions for 12 kecamatan · last sync 14 minutes ago</div>
+          <div className="page-sub">Dispatch decisions for 5 kecamatan · last sync 14 minutes ago</div>
         </div>
         <div className="topbar-actions">
           <button className="btn">

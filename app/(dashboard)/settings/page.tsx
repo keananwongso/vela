@@ -1,14 +1,6 @@
-export default function SettingsPage() {
-  const rows = [
-    { label: 'Mill', val: 'PT Sawit Riau · Pekanbaru', sub: 'Primary processing facility' },
-    { label: 'Default region', val: 'Riau Province · 12 kecamatan', sub: 'Visible on Overview map' },
-    { label: 'Moisture threshold', val: '24%', sub: 'Districts above this enter Monitor status' },
-    { label: 'FFA threshold', val: '3.5%', sub: 'Districts above this enter At-risk status' },
-    { label: 'CPO favorable trigger', val: 'price ≥ 4-week average', sub: 'Drives the favorable / caution signal' },
-    { label: 'Sync cadence', val: 'Every 30 minutes', sub: 'Satellite NDVI + weather + spot price feeds' },
-    { label: 'Notifications', val: 'Email + SMS to procurement lead', sub: 'Daily digest at 06:00 WIB' },
-  ];
+import { DISTRICTS } from '@/lib/data';
 
+export default function SettingsPage() {
   return (
     <>
       <div className="topbar">
@@ -21,32 +13,35 @@ export default function SettingsPage() {
 
       <section className="section">
         <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Procurement preferences</h2>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, lineHeight: 1.05 }}>
+            Procurement preferences
+          </h2>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
             Applies to all dispatch recommendations for PT Sawit Riau
           </div>
         </div>
 
-        {rows.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '200px 1fr auto',
-              gap: 24,
-              padding: '16px 28px',
-              borderBottom: '1px solid var(--border)',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'color-mix(in srgb, var(--ink) 84%, var(--surface))' }}>{row.label}</div>
-            <div>
-              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{row.val}</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{row.sub}</div>
-            </div>
-            <button className="btn">Edit</button>
+        <div className="settings-row">
+          <div className="settings-label">Region selector</div>
+          <div>
+            <select className="settings-control" defaultValue="kampar">
+              {DISTRICTS.map((district) => (
+                <option key={district.id} value={district.id}>
+                  {district.name}
+                </option>
+              ))}
+            </select>
+            <div className="settings-help">Visible on Overview map</div>
           </div>
-        ))}
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-label">Sync cadence</div>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 500 }}>Weekly · every Monday 06:00 WIB</div>
+            <div className="settings-help">Satellite NDVI + weather + spot price feeds</div>
+          </div>
+        </div>
 
         <div style={{ padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="btn">Cancel</button>
@@ -56,7 +51,9 @@ export default function SettingsPage() {
 
       <section className="section">
         <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Team</h2>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, lineHeight: 1.05 }}>
+            Team
+          </h2>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
             Members with access to this workspace
           </div>
