@@ -24,9 +24,7 @@ export interface CpoPoint {
 export interface MapRegion {
   id: string;
   name: string;
-  status: StatusKey | null;
-  d: string;
-  label: [number, number];
+  geoName: string;
 }
 
 export const STATUS_LABELS: Record<StatusKey, string> = {
@@ -120,66 +118,18 @@ export const CPO_SERIES: CpoPoint[] = [
 ];
 
 export const MAP_REGIONS: MapRegion[] = [
-  {
-    id: 'bengkalis', name: 'Bengkalis', status: null,
-    d: 'M 470 70 L 560 60 L 640 80 L 700 110 L 720 150 L 690 175 L 640 178 L 590 165 L 540 150 L 495 130 Z',
-    label: [600, 120],
-  },
-  {
-    id: 'dumai', name: 'Dumai', status: null,
-    d: 'M 380 95 L 470 70 L 495 130 L 470 160 L 410 158 L 375 135 Z',
-    label: [430, 122],
-  },
-  {
-    id: 'meranti', name: 'Meranti', status: null,
-    d: 'M 700 110 L 780 105 L 815 135 L 800 170 L 745 175 L 720 150 Z',
-    label: [755, 142],
-  },
-  {
-    id: 'kuansing', name: 'Kuantan Singingi', status: null,
-    d: 'M 230 320 L 320 305 L 360 335 L 350 385 L 290 410 L 230 395 L 200 360 Z',
-    label: [285, 360],
-  },
-  {
-    id: 'inhil', name: 'Indragiri Hilir', status: null,
-    d: 'M 560 320 L 660 310 L 730 340 L 760 395 L 720 425 L 640 425 L 580 405 L 545 365 Z',
-    label: [650, 372],
-  },
-  {
-    id: 'pekanbaru', name: 'Pekanbaru', status: null,
-    d: 'M 410 200 L 460 195 L 475 225 L 445 240 L 410 230 Z',
-    label: [442, 218],
-  },
-  {
-    id: 'rohul', name: 'Rokan Hulu', status: null,
-    d: 'M 200 130 L 290 115 L 335 145 L 320 195 L 260 215 L 210 195 L 180 165 Z',
-    label: [255, 165],
-  },
-  {
-    id: 'rohil', name: 'Rokan Hilir', status: 'green',
-    d: 'M 290 75 L 380 95 L 410 130 L 380 165 L 320 175 L 280 155 L 265 115 Z',
-    label: [335, 125],
-  },
-  {
-    id: 'siak', name: 'Siak', status: 'green',
-    d: 'M 460 195 L 540 175 L 590 195 L 600 235 L 555 260 L 495 255 L 470 230 Z',
-    label: [530, 218],
-  },
-  {
-    id: 'kampar', name: 'Kampar', status: 'green',
-    d: 'M 290 200 L 410 200 L 410 250 L 405 295 L 350 315 L 290 305 L 265 265 L 270 225 Z',
-    label: [340, 250],
-  },
-  {
-    id: 'pelalawan', name: 'Pelalawan', status: 'amber',
-    d: 'M 405 250 L 495 255 L 555 260 L 580 290 L 565 330 L 500 340 L 430 325 L 405 295 Z',
-    label: [495, 295],
-  },
-  {
-    id: 'inhu', name: 'Indragiri Hulu', status: 'red',
-    d: 'M 360 335 L 430 325 L 500 340 L 545 365 L 530 405 L 470 420 L 400 410 L 350 385 Z',
-    label: [445, 372],
-  },
+  { id: 'bengkalis', name: 'Bengkalis', geoName: 'Bengkalis' },
+  { id: 'dumai', name: 'Dumai', geoName: 'Kota Dumai' },
+  { id: 'inhil', name: 'Indragiri Hilir', geoName: 'Indragiri Hilir' },
+  { id: 'inhu', name: 'Indragiri Hulu', geoName: 'Indragiri Hulu' },
+  { id: 'kampar', name: 'Kampar', geoName: 'Kampar' },
+  { id: 'meranti', name: 'Kepulauan Meranti', geoName: 'Kepulauan Meranti' },
+  { id: 'kuansing', name: 'Kuantan Singingi', geoName: 'Kuantan Singingi' },
+  { id: 'pelalawan', name: 'Pelalawan', geoName: 'Pelalawan' },
+  { id: 'pekanbaru', name: 'Pekanbaru', geoName: 'Kota Pekanbaru' },
+  { id: 'rohil', name: 'Rokan Hilir', geoName: 'Rokan Hilir' },
+  { id: 'rohul', name: 'Rokan Hulu', geoName: 'Rokan Hulu' },
+  { id: 'siak', name: 'Siak', geoName: 'Siak' },
 ];
 
 export const MILL = {

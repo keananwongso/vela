@@ -1,8 +1,32 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { MAP_REGIONS, DISTRICTS, STATUS_LABELS, type StatusKey } from '@/lib/data';
+import { geoCentroid, geoMercator, geoPath } from 'd3-geo';
+import riauAdm2 from '@/lib/geo/riau-adm2.json';
+import { MAP_REGIONS, DISTRICTS, type StatusKey } from '@/lib/data';
 import StatusBadge from './status-badge';
+
+const SVG_WIDTH = 880;
+const SVG_HEIGHT = 480;
+
+type RiauFeatureProperties = {
+  id: string;
+  name: string;
+  geoName: string;
+  shapeID: string;
+};
+
+type RiauFeature = GeoJSON.Feature<GeoJSON.Geometry, RiauFeatureProperties>;
+type RiauFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, RiauFeatureProperties>;
+
+type RenderedRegion = {
+  id: string;
+  name: string;
+  geoName: string;
+  d: string;
+  label: [number, number];
+  status: StatusKey | null;
+};
 
 const FILL: Record<string, string> = {
   green: 'var(--healthy)',
@@ -21,20 +45,46 @@ function statusHint(status: StatusKey | null) {
   return 'No active recommendation';
 }
 
+const riauGeoJson = riauAdm2 as RiauFeatureCollection;
+const projection = geoMercator().fitSize([SVG_WIDTH, SVG_HEIGHT], riauGeoJson);
+const pathGenerator = geoPath(projection).digits(2);
+const featuresByGeoName = new Map(riauGeoJson.features.map((feature) => [feature.properties.geoName, feature]));
+const districtsById = new Map(DISTRICTS.map((district) => [district.id, district]));
+
+function roundCoordinate(value: number) {
+  return Number(value.toFixed(2));
+}
+
+const renderedRegions: RenderedRegion[] = MAP_REGIONS.flatMap((region) => {
+  const feature = featuresByGeoName.get(region.geoName);
+  if (!feature) return [];
+
+  const centroid = projection(geoCentroid(feature as RiauFeature));
+  const path = pathGenerator(feature as RiauFeature);
+  if (!centroid || !path) return [];
+
+  return [{
+    ...region,
+    d: path,
+    label: [roundCoordinate(centroid[0]), roundCoordinate(centroid[1])],
+    status: districtsById.get(region.id)?.status ?? null,
+  }];
+});
+
 interface Props {
   selected: string;
   setSelected: (id: string) => void;
 }
 
 export default function RiauMap({ selected, setSelected }: Props) {
-  const [hover, setHover] = useState<typeof MAP_REGIONS[0] | null>(null);
+  const [hover, setHover] = useState<RenderedRegion | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const selectedDistrict = DISTRICTS.find((d) => d.id === selected);
   const selectableDistrictIds = new Set(DISTRICTS.map((district) => district.id));
 
-  function onMove(e: React.MouseEvent, r: typeof MAP_REGIONS[0]) {
+  function onMove(e: React.MouseEvent, r: RenderedRegion) {
     const rect = wrapRef.current!.getBoundingClientRect();
     setTipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     setHover(r);
@@ -42,7 +92,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
 
   return (
     <div className="map-wrap" ref={wrapRef} onMouseLeave={() => setHover(null)}>
-      <svg className="map-svg" viewBox="0 0 880 480" preserveAspectRatio="xMidYMid meet">
+      <svg className="map-svg" viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(15,26,31,0.04)" strokeWidth="2" />
@@ -60,31 +110,28 @@ export default function RiauMap({ selected, setSelected }: Props) {
         <text x="820" y="60" textAnchor="end" fontSize="11" fill="rgba(15,26,31,0.35)" fontStyle="italic">Selat Malaka</text>
         <text x="60"  y="450" fontSize="11" fill="rgba(15,26,31,0.35)" fontStyle="italic">Sumatera Barat →</text>
 
-        <path
-          d="M 180 165 L 200 130 L 290 75 L 380 95 L 470 70 L 560 60 L 640 80 L 700 110 L 780 105 L 815 135 L 800 170 L 760 195 L 730 340 L 760 395 L 720 425 L 640 425 L 580 405 L 530 405 L 470 420 L 400 410 L 290 410 L 230 395 L 200 360 L 200 280 Z"
-          fill="var(--canvas)" stroke="var(--border)" strokeWidth="1" filter="url(#softShadow)"
-        />
+        <g filter="url(#softShadow)">
+          {renderedRegions.map((r) => (
+            <path
+              key={r.id}
+              d={r.d}
+              className={`map-region${selected === r.id ? ' selected' : ''}${selectableDistrictIds.has(r.id) ? '' : ' inactive'}`}
+              fill={fillFor(r.status)}
+              fillOpacity={r.status ? 0.92 : 1}
+              onMouseMove={(e) => onMove(e, r)}
+              onClick={() => {
+                if (selectableDistrictIds.has(r.id)) setSelected(r.id);
+              }}
+            />
+          ))}
+        </g>
 
-        {MAP_REGIONS.map((r) => (
-          <path
-            key={r.id}
-            d={r.d}
-            className={`map-region${selected === r.id ? ' selected' : ''}${selectableDistrictIds.has(r.id) ? '' : ' inactive'}`}
-            fill={fillFor(r.status)}
-            fillOpacity={r.status ? 0.92 : 1}
-            onMouseMove={(e) => onMove(e, r)}
-            onClick={() => {
-              if (selectableDistrictIds.has(r.id)) setSelected(r.id);
-            }}
-          />
-        ))}
-
-        {MAP_REGIONS.filter((r) => r.status).map((r) => (
+        {renderedRegions.filter((r) => r.status).map((r) => (
           <text
             key={`lbl-${r.id}`}
             x={r.label[0]} y={r.label[1]}
             textAnchor="middle"
-            fontSize="10.5"
+            fontSize="9.5"
             fontWeight="600"
             fill="rgba(15,26,31,0.85)"
             style={{ pointerEvents: 'none', fontFamily: 'IBM Plex Sans, sans-serif' }}
@@ -92,12 +139,12 @@ export default function RiauMap({ selected, setSelected }: Props) {
             {r.name}
           </text>
         ))}
-        {MAP_REGIONS.filter((r) => !r.status).map((r) => (
+        {renderedRegions.filter((r) => !r.status).map((r) => (
           <text
             key={`lbl-${r.id}`}
             x={r.label[0]} y={r.label[1]}
             textAnchor="middle"
-            fontSize="10.5"
+            fontSize="9"
             fontWeight="500"
             fill="rgba(15,26,31,0.55)"
             style={{ pointerEvents: 'none', fontFamily: 'IBM Plex Sans, sans-serif' }}
