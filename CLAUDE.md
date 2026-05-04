@@ -194,6 +194,8 @@ Weekly cron (n8n)
 
 **Integration contract:** Keanan's frontend calls Ali's FastAPI. The API shape is the single agreed contract. Frontend mocks data locally until Ali's endpoints are live, then swaps in the real URLs.
 
+**Working integration spec:** See `INTEGRATION_SPEC.md` for the canonical MongoDB schema, region IDs, n8n write rules, and FastAPI read contract. Treat that file as the source of truth for backend and pipeline integration.
+
 ---
 
 ## Competition Context

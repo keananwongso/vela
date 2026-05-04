@@ -67,3 +67,4 @@ lib/
 - The Riau map uses a committed, Riau-only subset of geoBoundaries `gbOpen` Indonesia ADM2 simplified GeoJSON, derived from BPS/WFP/OCHA boundary data under the license reported by the geoBoundaries metadata endpoint
 - There is no backend or database wired up yet
 - `vercel.json` is included for deployment on Vercel
+- `INTEGRATION_SPEC.md` defines the MongoDB, n8n, and FastAPI contract for the next integration phase
