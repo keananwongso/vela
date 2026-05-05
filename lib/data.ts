@@ -1,38 +1,4 @@
-export type StatusKey = 'green' | 'amber' | 'red';
-
-export interface District {
-  id: string;
-  name: string;
-  status: StatusKey;
-  action: string;
-  cpo: number;
-  cpoNote: 'favorable' | 'caution';
-  yield: string;
-  ndvi: number;
-  moisture: string;
-  ffa: string;
-  trucks: number;
-  eta: string;
-  confidence: number;
-}
-
-export interface CpoPoint {
-  week: string;
-  price: number;
-  current?: boolean;
-}
-
-export interface MapRegion {
-  id: string;
-  name: string;
-  geoName: string;
-}
-
-export const STATUS_LABELS: Record<StatusKey, string> = {
-  green: 'Healthy',
-  amber: 'Monitor',
-  red: 'At risk',
-};
+import type { CpoPoint, District, MapRegion } from '@/lib/dashboard-types';
 
 export const DISTRICTS: District[] = [
   {

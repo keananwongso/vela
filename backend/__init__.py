@@ -1,0 +1,1 @@
+"""Vela FastAPI backend package."""

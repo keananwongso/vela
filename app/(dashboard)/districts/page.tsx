@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { DISTRICTS, type StatusKey } from '@/lib/data';
+import { useDashboardData } from '@/components/dashboard-data-provider';
+import type { District, StatusKey } from '@/lib/dashboard-types';
 import StatusBadge from '@/components/status-badge';
 
 type SortKey = 'status' | 'yield' | 'moisture' | 'ffa' | 'trucks';
 
 const STATUS_ORDER: Record<StatusKey, number> = { green: 0, amber: 1, red: 2 };
 
-function sortDistricts(districts: typeof DISTRICTS, key: SortKey, asc: boolean) {
+function sortDistricts(districts: District[], key: SortKey, asc: boolean) {
   return [...districts].sort((a, b) => {
     let diff = 0;
     if (key === 'status') diff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
@@ -24,13 +25,17 @@ export default function DistrictsPage() {
   const [selected, setSelected] = useState('kampar');
   const [sortKey, setSortKey] = useState<SortKey>('status');
   const [sortAsc, setSortAsc] = useState(true);
+  const { districts } = useDashboardData();
 
   function handleSort(k: SortKey) {
     if (sortKey === k) setSortAsc(!sortAsc);
     else { setSortKey(k); setSortAsc(true); }
   }
 
-  const sorted = sortDistricts(DISTRICTS, sortKey, sortAsc);
+  const sorted = sortDistricts(districts, sortKey, sortAsc);
+  const dispatchCount = districts.filter((district) => district.status === 'green').length;
+  const holdCount = districts.filter((district) => district.status === 'amber').length;
+  const riskCount = districts.filter((district) => district.status === 'red').length;
 
   function SortArrow({ k }: { k: SortKey }) {
     if (sortKey !== k) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
@@ -56,13 +61,13 @@ export default function DistrictsPage() {
       <section className="section">
         <div className="section-head">
           <div>
-            <h2>All districts · 5 active</h2>
+            <h2>All districts · {districts.length} active</h2>
             <div className="meta">Sorted by recommended dispatch priority · click column to sort</div>
           </div>
           <div className="right">
-            <span className="badge green"><span className="dot" />3 dispatch</span>
-            <span className="badge amber"><span className="dot" />1 hold</span>
-            <span className="badge red"><span className="dot" />1 at risk</span>
+            <span className="badge green"><span className="dot" />{dispatchCount} dispatch</span>
+            <span className="badge amber"><span className="dot" />{holdCount} hold</span>
+            <span className="badge red"><span className="dot" />{riskCount} at risk</span>
           </div>
         </div>
 

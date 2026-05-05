@@ -1,6 +1,6 @@
 'use client';
 
-import { CPO_SERIES, type CpoPoint } from '@/lib/data';
+import type { CpoPoint } from '@/lib/dashboard-types';
 
 const W = 920;
 const H = 220;
@@ -22,7 +22,7 @@ function buildChart(series: CpoPoint[]) {
   const yMin = Math.floor((minP - 80) / 100) * 100;
   const yMax = Math.ceil((maxP + 80) / 100) * 100;
 
-  const xFn = (i: number) => PAD_L + (INNER_W * i) / (series.length - 1);
+  const xFn = (i: number) => PAD_L + (INNER_W * i) / Math.max(series.length - 1, 1);
   const yFn = (v: number) => PAD_T + INNER_H * (1 - (v - yMin) / (yMax - yMin));
 
   const linePath = series
@@ -52,7 +52,7 @@ function buildChart(series: CpoPoint[]) {
   return { xFn, yFn, linePath, areaPath, ticks, yMin, yMax, last4Avg, current, wowDelta, wowPct, favorable, slope, intercept, n };
 }
 
-export default function PriceChart({ series = CPO_SERIES }: { series?: CpoPoint[] }) {
+export default function PriceChart({ series }: { series: CpoPoint[] }) {
   const { xFn, yFn, linePath, areaPath, ticks, last4Avg, current, wowDelta, wowPct, favorable, slope, intercept, n } = buildChart(series);
 
   return (

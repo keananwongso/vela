@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DISTRICTS } from '@/lib/data';
+import { useDashboardData } from '@/components/dashboard-data-provider';
 import { isOverviewViewMode, OVERVIEW_VIEW_STORAGE_KEY, type OverviewViewMode } from '@/lib/view-mode';
 
 export default function SettingsPage() {
   const [defaultView, setDefaultView] = useState<OverviewViewMode>('simple');
+  const { districts } = useDashboardData();
 
   useEffect(() => {
     try {
@@ -50,7 +51,7 @@ export default function SettingsPage() {
           <div className="settings-label">Region selector</div>
           <div>
             <select className="settings-control" defaultValue="kampar">
-              {DISTRICTS.map((district) => (
+              {districts.map((district) => (
                 <option key={district.id} value={district.id}>
                   {district.name}
                 </option>

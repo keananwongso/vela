@@ -29,6 +29,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The root route redirects to `/overview`.
 
+## Backend setup
+
+Create a local env file from `.env.example`, then install the Python backend dependencies:
+
+```bash
+python -m pip install -r backend/requirements.txt
+```
+
+Seed MongoDB Atlas and start the FastAPI server:
+
+```bash
+python -m backend.seed
+uvicorn backend.main:app --reload
+```
+
+The frontend reads from `NEXT_PUBLIC_API_BASE_URL` and falls back to local mock data if the API is unavailable.
+
 ## Available scripts
 
 ```bash

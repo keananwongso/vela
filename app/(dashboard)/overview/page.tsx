@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DISTRICTS, CPO_SERIES } from '@/lib/data';
+import { useDashboardData } from '@/components/dashboard-data-provider';
 import { isOverviewViewMode, OVERVIEW_VIEW_STORAGE_KEY, type OverviewViewMode } from '@/lib/view-mode';
 import RiauMap from '@/components/riau-map';
 import PriceChart from '@/components/chart';
@@ -16,10 +16,11 @@ function sentenceCase(value: string) {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
-function buildWeeklyActionStatement() {
-  const healthy = DISTRICTS.filter((district) => district.status === 'green').map((district) => district.name);
-  const monitor = DISTRICTS.filter((district) => district.status === 'amber').map((district) => district.name);
-  const risk = DISTRICTS.filter((district) => district.status === 'red').map((district) => district.name);
+function buildWeeklyActionStatement(
+  healthy: string[],
+  monitor: string[],
+  risk: string[],
+) {
 
   const clauses = [
     healthy.length ? `dispatch to ${formatDistrictList(healthy)}` : null,
@@ -41,6 +42,7 @@ const STATUS_COPY = {
 export default function OverviewPage() {
   const [selected, setSelected] = useState('kampar');
   const [viewMode, setViewMode] = useState<OverviewViewMode>('simple');
+  const { districts, prices, source } = useDashboardData();
 
   useEffect(() => {
     try {
@@ -50,6 +52,12 @@ export default function OverviewPage() {
       // Local storage can be unavailable in private or restricted browser contexts.
     }
   }, []);
+
+  useEffect(() => {
+    if (districts.length && !districts.some((district) => district.id === selected)) {
+      setSelected(districts[0].id);
+    }
+  }, [districts, selected]);
 
   function updateViewMode(nextMode: OverviewViewMode) {
     setViewMode(nextMode);
@@ -61,29 +69,36 @@ export default function OverviewPage() {
     }
   }
 
-  const counts = DISTRICTS.reduce<Record<string, number>>((acc, d) => {
+  const counts = districts.reduce<Record<string, number>>((acc, d) => {
     acc[d.status] = (acc[d.status] || 0) + 1;
     return acc;
   }, {});
 
-  const current = CPO_SERIES[CPO_SERIES.length - 1];
-  const previous = CPO_SERIES[CPO_SERIES.length - 2];
-  const last4Avg = CPO_SERIES.slice(-4).reduce((sum, point) => sum + point.price, 0) / 4;
+  const current = prices.series[prices.series.length - 1];
+  const previous = prices.series[prices.series.length - 2] ?? current;
+  const last4Avg = prices.series.slice(-4).reduce((sum, point) => sum + point.price, 0) / Math.min(4, prices.series.length);
   const priceDelta = current.price - previous.price;
-  const totalTrucks = DISTRICTS.reduce((sum, district) => sum + district.trucks, 0);
-  const weeklyActionStatement = buildWeeklyActionStatement();
+  const totalTrucks = districts.reduce((sum, district) => sum + district.trucks, 0);
+  const healthyDistricts = districts.filter((district) => district.status === 'green');
+  const monitorDistricts = districts.filter((district) => district.status === 'amber');
+  const riskDistricts = districts.filter((district) => district.status === 'red');
+  const weeklyActionStatement = buildWeeklyActionStatement(
+    healthyDistricts.map((district) => district.name),
+    monitorDistricts.map((district) => district.name),
+    riskDistricts.map((district) => district.name),
+  );
   const actionGroups = [
     {
       status: 'green',
-      districts: DISTRICTS.filter((district) => district.status === 'green'),
+      districts: healthyDistricts,
     },
     {
       status: 'amber',
-      districts: DISTRICTS.filter((district) => district.status === 'amber'),
+      districts: monitorDistricts,
     },
     {
       status: 'red',
-      districts: DISTRICTS.filter((district) => district.status === 'red'),
+      districts: riskDistricts,
     },
   ] as const;
 
@@ -93,7 +108,9 @@ export default function OverviewPage() {
         <div>
           <div className="crumb">Riau Province · Week 17 · Apr 15 – Apr 21, 2026</div>
           <h1 className="page-title">Procurement overview</h1>
-          <div className="page-sub">Dispatch decisions for 5 kecamatan · last sync 14 minutes ago</div>
+          <div className="page-sub">
+            Dispatch decisions for {districts.length} kecamatan · {source === 'mock' ? 'mock fallback active' : 'API-backed snapshot'}
+          </div>
         </div>
         <div className="topbar-actions">
           <div className="topbar-action-row">
@@ -185,7 +202,7 @@ export default function OverviewPage() {
                 <div className="meta">Click a kecamatan for the field-level reason</div>
               </div>
             </div>
-            <RiauMap selected={selected} setSelected={setSelected} />
+            <RiauMap districts={districts} selected={selected} setSelected={setSelected} />
           </section>
         </>
       ) : (
@@ -208,7 +225,7 @@ export default function OverviewPage() {
             </div>
 
             <div className="terminal-tape">
-              <div><span>READY</span><strong className="mono">{counts.green || 0}/{DISTRICTS.length}</strong><em>+1 WoW</em></div>
+              <div><span>READY</span><strong className="mono">{counts.green || 0}/{districts.length}</strong><em>+1 WoW</em></div>
               <div><span>CPO DUMAI</span><strong className="mono">{current.price.toLocaleString('en-US')}</strong><em>+{priceDelta.toLocaleString('en-US')}</em></div>
               <div><span>INTAKE</span><strong className="mono">2,840</strong><em>tonnes FFB</em></div>
               <div><span>FLEET</span><strong className="mono">78%</strong><em>{totalTrucks} staged</em></div>
@@ -221,7 +238,7 @@ export default function OverviewPage() {
                   <span>CHOROPLETH / CROP HEALTH</span>
                   <strong>NDVI + moisture + FFA</strong>
                 </div>
-                <RiauMap selected={selected} setSelected={setSelected} />
+                <RiauMap districts={districts} selected={selected} setSelected={setSelected} />
               </div>
 
               <div className="terminal-panel">
@@ -240,7 +257,7 @@ export default function OverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {DISTRICTS.map((district) => (
+                    {districts.map((district) => (
                       <tr key={district.id} onClick={() => setSelected(district.id)}>
                         <td>{district.name}</td>
                         <td><span className={`terminal-signal ${district.status}`}>{STATUS_COPY[district.status].label}</span></td>
@@ -258,7 +275,7 @@ export default function OverviewPage() {
                   <span>CPO PRICE TAPE</span>
                   <strong>4-week mean reference line</strong>
                 </div>
-                <PriceChart />
+                <PriceChart series={prices.series} />
               </div>
 
               <div className="terminal-panel">

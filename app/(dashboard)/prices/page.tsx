@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CPO_SERIES } from '@/lib/data';
+import { useDashboardData } from '@/components/dashboard-data-provider';
 import PriceChart from '@/components/chart';
 
 const CHART_TABS = ['4w', '8w', '26w', '52w'] as const;
@@ -16,15 +16,31 @@ function fmt(n: number) {
   return n.toLocaleString('en-US');
 }
 
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
+    timeZoneName: 'short',
+  });
+}
+
 export default function PricesPage() {
   const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8w');
+  const { prices } = useDashboardData();
+  const series = prices.series;
 
-  const cur = CPO_SERIES[CPO_SERIES.length - 1];
-  const last4 = CPO_SERIES.slice(-4).reduce((s, p) => s + p.price, 0) / 4;
-  const last8avg = CPO_SERIES.reduce((s, p) => s + p.price, 0) / CPO_SERIES.length;
+  const cur = series[series.length - 1];
+  const last4 = series.slice(-4).reduce((s, p) => s + p.price, 0) / Math.min(4, series.length);
+  const last8avg = series.reduce((s, p) => s + p.price, 0) / series.length;
   const weeksToShow = WEEKS_BY_TAB[chartTab];
-  const visibleSeries = CPO_SERIES.slice(-Math.min(weeksToShow, CPO_SERIES.length));
-  const showingAllAvailable = weeksToShow > CPO_SERIES.length;
+  const visibleSeries = series.slice(-Math.min(weeksToShow, series.length));
+  const showingAllAvailable = weeksToShow > series.length;
 
   return (
     <>
@@ -57,7 +73,7 @@ export default function PricesPage() {
         </div>
         <div className="kpi">
           <div className="label">FFB reference</div>
-          <div className="val mono">2,480<span className="unit">IDR/kg</span></div>
+          <div className="val mono">{fmt(prices.ffbReference)}<span className="unit">IDR/kg</span></div>
           <div className="delta up">▲ 0.4% WoW</div>
         </div>
       </div>
@@ -67,7 +83,7 @@ export default function PricesPage() {
           <div>
             <h2>CPO price trend · {chartTab}</h2>
             <div className="meta">
-              Source: Bursa Malaysia Derivatives, Dumai port spot conversion
+              Source: {prices.province} province seeded API feed
               {showingAllAvailable ? ' (showing all available data)' : ''}
             </div>
           </div>
@@ -83,8 +99,8 @@ export default function PricesPage() {
         </div>
         <PriceChart series={visibleSeries} />
         <div className="foot">
-          <span>Source: Dumai port spot · Bursa Malaysia Derivatives</span>
-          <span>Updated Apr 21, 2026 · 14:38 WIB</span>
+          <span>Source: MongoDB Atlas via FastAPI</span>
+          <span>Updated {formatUpdatedAt(prices.lastUpdated)}</span>
         </div>
       </section>
 
@@ -105,8 +121,8 @@ export default function PricesPage() {
             </tr>
           </thead>
           <tbody>
-            {CPO_SERIES.map((p, i) => {
-              const prev = i > 0 ? CPO_SERIES[i - 1].price : p.price;
+            {series.map((p, i) => {
+              const prev = i > 0 ? series[i - 1].price : p.price;
               const delta = p.price - prev;
               const pct = i > 0 ? (delta / prev) * 100 : 0;
               const favorable = p.price >= last4;

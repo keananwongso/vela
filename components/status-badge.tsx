@@ -1,4 +1,4 @@
-import { STATUS_LABELS, type StatusKey } from '@/lib/data';
+import { STATUS_LABELS, type StatusKey } from '@/lib/dashboard-types';
 
 export default function StatusBadge({ status }: { status: StatusKey }) {
   return (

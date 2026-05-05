@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react';
 import { geoCentroid, geoMercator, geoPath } from 'd3-geo';
 import riauAdm2 from '@/lib/geo/riau-adm2.json';
-import { MAP_REGIONS, DISTRICTS, type StatusKey } from '@/lib/data';
+import { MAP_REGIONS } from '@/lib/data';
+import type { District, StatusKey } from '@/lib/dashboard-types';
 import StatusBadge from './status-badge';
 
 const SVG_WIDTH = 880;
@@ -25,7 +26,6 @@ type RenderedRegion = {
   geoName: string;
   d: string;
   label: [number, number];
-  status: StatusKey | null;
 };
 
 const FILL: Record<string, string> = {
@@ -49,7 +49,6 @@ const riauGeoJson = riauAdm2 as RiauFeatureCollection;
 const projection = geoMercator().fitSize([SVG_WIDTH, SVG_HEIGHT], riauGeoJson);
 const pathGenerator = geoPath(projection).digits(2);
 const featuresByGeoName = new Map(riauGeoJson.features.map((feature) => [feature.properties.geoName, feature]));
-const districtsById = new Map(DISTRICTS.map((district) => [district.id, district]));
 
 function roundCoordinate(value: number) {
   return Number(value.toFixed(2));
@@ -67,22 +66,23 @@ const renderedRegions: RenderedRegion[] = MAP_REGIONS.flatMap((region) => {
     ...region,
     d: path,
     label: [roundCoordinate(centroid[0]), roundCoordinate(centroid[1])],
-    status: districtsById.get(region.id)?.status ?? null,
   }];
 });
 
 interface Props {
+  districts: District[];
   selected: string;
   setSelected: (id: string) => void;
 }
 
-export default function RiauMap({ selected, setSelected }: Props) {
+export default function RiauMap({ districts, selected, setSelected }: Props) {
   const [hover, setHover] = useState<RenderedRegion | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const selectedDistrict = DISTRICTS.find((d) => d.id === selected);
-  const selectableDistrictIds = new Set(DISTRICTS.map((district) => district.id));
+  const districtsById = new Map(districts.map((district) => [district.id, district]));
+  const selectedDistrict = districts.find((d) => d.id === selected);
+  const selectableDistrictIds = new Set(districts.map((district) => district.id));
 
   function onMove(e: React.MouseEvent, r: RenderedRegion) {
     const rect = wrapRef.current!.getBoundingClientRect();
@@ -116,8 +116,8 @@ export default function RiauMap({ selected, setSelected }: Props) {
               key={r.id}
               d={r.d}
               className={`map-region${selected === r.id ? ' selected' : ''}${selectableDistrictIds.has(r.id) ? '' : ' inactive'}`}
-              fill={fillFor(r.status)}
-              fillOpacity={r.status ? 0.92 : 1}
+              fill={fillFor(districtsById.get(r.id)?.status ?? null)}
+              fillOpacity={districtsById.get(r.id)?.status ? 0.92 : 1}
               onMouseMove={(e) => onMove(e, r)}
               onClick={() => {
                 if (selectableDistrictIds.has(r.id)) setSelected(r.id);
@@ -126,7 +126,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
           ))}
         </g>
 
-        {renderedRegions.filter((r) => r.status).map((r) => (
+        {renderedRegions.filter((r) => districtsById.get(r.id)?.status).map((r) => (
           <text
             key={`lbl-${r.id}`}
             x={r.label[0]} y={r.label[1]}
@@ -139,7 +139,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
             {r.name}
           </text>
         ))}
-        {renderedRegions.filter((r) => !r.status).map((r) => (
+        {renderedRegions.filter((r) => !districtsById.get(r.id)?.status).map((r) => (
           <text
             key={`lbl-${r.id}`}
             x={r.label[0]} y={r.label[1]}
@@ -166,7 +166,7 @@ export default function RiauMap({ selected, setSelected }: Props) {
           style={{ left: tipPos.x, top: tipPos.y }}
         >
           <div>{hover.name}</div>
-          <div className="tip-sub">{statusHint(hover.status)}</div>
+          <div className="tip-sub">{statusHint(districtsById.get(hover.id)?.status ?? null)}</div>
         </div>
       )}
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { DISTRICTS } from '@/lib/data';
+import type { District } from '@/lib/dashboard-types';
 import StatusBadge from './status-badge';
 
 interface Props {
+  districts: District[];
   selected: string;
   setSelected: (id: string) => void;
 }
@@ -12,10 +13,10 @@ function fmtIDR(n: number) {
   return n.toLocaleString('en-US');
 }
 
-export default function RecommendationCards({ selected, setSelected }: Props) {
+export default function RecommendationCards({ districts, selected, setSelected }: Props) {
   return (
     <div className="cards-scroll">
-      {DISTRICTS.map((d) => (
+      {districts.map((d) => (
         <div
           key={d.id}
           className={`rec-card ${d.status}${selected === d.id ? ' selected' : ''}`}
