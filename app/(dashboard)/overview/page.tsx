@@ -5,6 +5,7 @@ import { useDashboardData } from '@/components/dashboard-data-provider';
 import { isOverviewViewMode, OVERVIEW_VIEW_STORAGE_KEY, type OverviewViewMode } from '@/lib/view-mode';
 import RiauMap from '@/components/riau-map';
 import PriceChart from '@/components/chart';
+import { getPriceSeriesMeta } from '@/lib/price-window';
 
 function formatDistrictList(names: string[]) {
   if (names.length <= 1) return names[0] || '';
@@ -70,6 +71,7 @@ export default function OverviewPage() {
   const [selected, setSelected] = useState('kampar');
   const [viewMode, setViewMode] = useState<OverviewViewMode>('simple');
   const { districts, prices, source, meta } = useDashboardData();
+  const priceSeriesMeta = getPriceSeriesMeta(prices.series);
 
   useEffect(() => {
     try {
@@ -103,7 +105,8 @@ export default function OverviewPage() {
 
   const current = prices.series[prices.series.length - 1];
   const previous = prices.series[prices.series.length - 2] ?? current;
-  const last4Avg = prices.series.slice(-4).reduce((sum, point) => sum + point.price, 0) / Math.min(4, prices.series.length);
+  const referenceWindow = Math.min(priceSeriesMeta.referencePeriods, prices.series.length);
+  const referenceAvg = prices.series.slice(-referenceWindow).reduce((sum, point) => sum + point.price, 0) / Math.max(referenceWindow, 1);
   const priceDelta = current.price - previous.price;
   const healthyDistricts = districts.filter((district) => district.status === 'green');
   const monitorDistricts = districts.filter((district) => district.status === 'amber');
@@ -129,7 +132,7 @@ export default function OverviewPage() {
   const priceTraceLine = {
     sortValue: parseTimeValue(meta.syncTimestamp ?? current.timestamp) ?? Number.NEGATIVE_INFINITY,
     time: formatSignalTimestamp(meta.syncTimestamp ?? current.timestamp, '—'),
-    text: `CPO ${current.price >= last4Avg ? 'above' : 'below'} 4-week mean; procurement bias ${current.price >= last4Avg ? 'favorable' : 'cautious'}.`,
+    text: `CPO ${current.price >= referenceAvg ? 'above' : 'below'} ${priceSeriesMeta.isDailyWindow ? `${priceSeriesMeta.referencePeriods}-day` : '4-week'} mean; procurement bias ${current.price >= referenceAvg ? 'favorable' : 'cautious'}.`,
   };
   const modelTraceLines = [...districtTraceLines, priceTraceLine].sort((a, b) => a.sortValue - b.sortValue);
   const weeklyActionStatement = buildWeeklyActionStatement(
@@ -210,7 +213,7 @@ export default function OverviewPage() {
               <div className="simple-hero-meta">
                 <span><strong className="mono">{healthyDistricts.length}</strong> districts ready</span>
                 <span><strong className="mono">{current.price.toLocaleString('en-US')}</strong> IDR/kg CPO</span>
-                <span><strong className="mono">{Math.round(last4Avg).toLocaleString('en-US')}</strong> 4-week avg</span>
+                <span><strong className="mono">{Math.round(referenceAvg).toLocaleString('en-US')}</strong> {priceSeriesMeta.averageLabelShort}</span>
               </div>
             </div>
             <div className="simple-action-grid">
@@ -323,7 +326,7 @@ export default function OverviewPage() {
               <div className="terminal-panel terminal-price-panel">
                 <div className="terminal-panel-head">
                   <span>CPO PRICE TAPE</span>
-                  <strong>4-week mean reference line</strong>
+                  <strong>{priceSeriesMeta.referenceLineLabel}</strong>
                 </div>
                 <PriceChart series={prices.series} />
               </div>

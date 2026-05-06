@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useDashboardData } from '@/components/dashboard-data-provider';
 import PriceChart from '@/components/chart';
+import { getPriceSeriesMeta } from '@/lib/price-window';
 
 const CHART_TABS = ['4w', '8w', '26w', '52w'] as const;
 const WEEKS_BY_TAB: Record<(typeof CHART_TABS)[number], number> = {
@@ -34,9 +35,11 @@ export default function PricesPage() {
   const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8w');
   const { prices } = useDashboardData();
   const series = prices.series;
+  const priceSeriesMeta = getPriceSeriesMeta(series);
 
   const cur = series[series.length - 1];
-  const last4 = series.slice(-4).reduce((s, p) => s + p.price, 0) / Math.min(4, series.length);
+  const referenceWindow = Math.min(priceSeriesMeta.referencePeriods, series.length);
+  const referenceAvg = series.slice(-referenceWindow).reduce((s, p) => s + p.price, 0) / Math.max(referenceWindow, 1);
   const last8avg = series.reduce((s, p) => s + p.price, 0) / series.length;
   const weeksToShow = WEEKS_BY_TAB[chartTab];
   const visibleSeries = series.slice(-Math.min(weeksToShow, series.length));
@@ -59,11 +62,11 @@ export default function PricesPage() {
         <div className="kpi">
           <div className="label">CPO spot · Dumai</div>
           <div className="val mono">{fmt(cur.price)}<span className="unit">IDR/kg</span></div>
-          <div className="delta up">▲ favorable vs 4-wk avg</div>
+          <div className="delta up">▲ favorable vs {priceSeriesMeta.averageLabelShort}</div>
         </div>
         <div className="kpi">
-          <div className="label">4-week average</div>
-          <div className="val mono">{fmt(Math.round(last4))}<span className="unit">IDR/kg</span></div>
+          <div className="label">{priceSeriesMeta.averageLabelLong}</div>
+          <div className="val mono">{fmt(Math.round(referenceAvg))}<span className="unit">IDR/kg</span></div>
           <div className="delta flat">trailing window</div>
         </div>
         <div className="kpi">
@@ -83,7 +86,7 @@ export default function PricesPage() {
           <div>
             <h2>CPO price trend · {chartTab}</h2>
             <div className="meta">
-              Source: {prices.province} province seeded API feed
+              Source: {prices.province} province live API feed
               {showingAllAvailable ? ' (showing all available data)' : ''}
             </div>
           </div>
@@ -107,14 +110,14 @@ export default function PricesPage() {
       <section className="section">
         <div className="section-head">
           <div>
-            <h2>Weekly history</h2>
+            <h2>{priceSeriesMeta.historyLabel}</h2>
             <div className="meta">CPO spot · IDR/kg</div>
           </div>
         </div>
         <table className="data-table">
           <thead>
             <tr>
-              <th>Week</th>
+              <th>{priceSeriesMeta.periodLabel}</th>
               <th>Price (IDR/kg)</th>
               <th>WoW change</th>
               <th>Signal</th>
@@ -125,7 +128,7 @@ export default function PricesPage() {
               const prev = i > 0 ? series[i - 1].price : p.price;
               const delta = p.price - prev;
               const pct = i > 0 ? (delta / prev) * 100 : 0;
-              const favorable = p.price >= last4;
+              const favorable = p.price >= referenceAvg;
               return (
                 <tr key={p.week} className={p.current ? 'row-selected' : ''}>
                   <td style={{ fontWeight: p.current ? 600 : 500 }}>

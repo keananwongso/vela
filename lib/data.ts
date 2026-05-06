@@ -89,6 +89,15 @@ export const CPO_SERIES: CpoPoint[] = [
   { week: 'Apr 21', price: 12400, current: true },
 ];
 
+export const CPO_RECENT_BACKFILL_SERIES: CpoPoint[] = [
+  { week: 'Apr 27', price: 15459, timestamp: '2026-04-27T07:00:00Z' },
+  { week: 'Apr 29', price: 15220, timestamp: '2026-04-29T07:00:00Z' },
+  { week: 'Apr 30', price: 15400, timestamp: '2026-04-30T07:00:00Z' },
+  { week: 'May 04', price: 15400, timestamp: '2026-05-04T07:00:00Z' },
+  { week: 'May 05', price: 15625, timestamp: '2026-05-05T07:00:00Z' },
+  { week: 'May 06', price: 15575, timestamp: '2026-05-06T07:00:00Z', current: true },
+];
+
 export const MAP_REGIONS: MapRegion[] = [
   { id: 'bengkalis', name: 'Bengkalis', geoName: 'Bengkalis' },
   { id: 'dumai', name: 'Dumai', geoName: 'Kota Dumai' },

@@ -1,4 +1,4 @@
-import { CPO_SERIES, DISTRICTS } from '@/lib/data';
+import { CPO_RECENT_BACKFILL_SERIES, DISTRICTS } from '@/lib/data';
 import type { DashboardSnapshot, District, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
 
 type ApiRegionSummary = {
@@ -64,6 +64,25 @@ function formatDayLabel(value: Date) {
   }).format(value);
 }
 
+function getRecentSeriesWindow(points: ApiPricePoint[]) {
+  const enriched = points
+    .map((point) => {
+      const date = parseTimestamp(point.timestamp);
+      return date ? { ...point, date } : null;
+    })
+    .filter((point): point is ApiPricePoint & { date: Date } => point !== null);
+
+  if (!enriched.length) return points;
+
+  const latest = enriched[enriched.length - 1].date.getTime();
+  const cutoff = latest - (6 * 86400000);
+  const recent = enriched.filter((point) => point.date.getTime() >= cutoff);
+
+  return recent.length
+    ? recent.map(({ date: _date, ...point }) => point)
+    : points;
+}
+
 function getIsoWeek(date: Date) {
   const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = normalized.getUTCDay() || 7;
@@ -98,19 +117,21 @@ function getOverviewMeta(syncTimestamp: string | null | undefined): OverviewMeta
 }
 
 function getFallbackPrices(): PriceSnapshot {
+  const latestPoint = CPO_RECENT_BACKFILL_SERIES[CPO_RECENT_BACKFILL_SERIES.length - 1];
+
   return {
     commodity: 'cpo',
     province: 'Riau',
     unit: 'IDR/kg',
-    currentPrice: CPO_SERIES[CPO_SERIES.length - 1].price,
-    lastUpdated: '2026-04-21T07:38:00Z',
-    series: CPO_SERIES,
+    currentPrice: latestPoint.price,
+    lastUpdated: latestPoint.timestamp ?? '2026-05-06T07:00:00Z',
+    series: CPO_RECENT_BACKFILL_SERIES,
     ffbReference: 2480,
   };
 }
 
 function getFallbackSnapshot(): DashboardSnapshot {
-  const meta = getOverviewMeta('2026-04-21T07:38:00Z');
+  const meta = getOverviewMeta('2026-05-06T07:00:00Z');
   return {
     districts: DISTRICTS,
     prices: getFallbackPrices(),
@@ -128,14 +149,24 @@ function normalizeConfidence(confidence: number | null | undefined, fallback: nu
 function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
   if (!apiPrices || !apiPrices.series.length) return getFallbackPrices();
 
+  const recentSeries = getRecentSeriesWindow(apiPrices.series);
+  const activeSeries = recentSeries.length >= 6
+    ? recentSeries
+    : CPO_RECENT_BACKFILL_SERIES.map((point) => ({
+        timestamp: point.timestamp ?? '2026-05-06T07:00:00Z',
+        week: point.week,
+        price: point.price,
+      }));
+  const latestPoint = activeSeries[activeSeries.length - 1];
+
   return {
     commodity: apiPrices.commodity,
     province: apiPrices.province,
     unit: apiPrices.unit,
-    currentPrice: apiPrices.currentPrice,
-    lastUpdated: apiPrices.lastUpdated,
-    series: apiPrices.series.map((point, index, points) => ({
-      week: point.week,
+    currentPrice: latestPoint.price,
+    lastUpdated: latestPoint.timestamp,
+    series: activeSeries.map((point, index, points) => ({
+      week: parseTimestamp(point.timestamp) ? formatDayLabel(parseTimestamp(point.timestamp) as Date) : point.week,
       price: point.price,
       timestamp: point.timestamp,
       current: index === points.length - 1,

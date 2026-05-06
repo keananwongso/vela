@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CpoPoint } from '@/lib/dashboard-types';
+import { getPriceSeriesMeta } from '@/lib/price-window';
 
 const W = 920;
 const H = 220;
@@ -27,6 +28,7 @@ function niceStep(roughStep: number) {
 }
 
 function buildChart(series: CpoPoint[]) {
+  const seriesMeta = getPriceSeriesMeta(series);
   const prices = series.map((p) => p.price);
   const minP = Math.min(...prices);
   const maxP = Math.max(...prices);
@@ -51,35 +53,66 @@ function buildChart(series: CpoPoint[]) {
   const meanY = prices.reduce((a, b) => a + b, 0) / n;
   const num = prices.reduce((s, p, i) => s + (i - meanX) * (p - meanY), 0);
   const den = prices.reduce((s, _, i) => s + (i - meanX) ** 2, 0);
-  const slope = num / den;
-  const intercept = meanY - slope * meanX;
+  const hasTrendLine = n > 1 && den > 0;
+  const slope = hasTrendLine ? num / den : 0;
+  const intercept = hasTrendLine ? meanY - slope * meanX : meanY;
 
   const ticks: number[] = [];
   for (let v = yMin; v <= yMax; v += step) ticks.push(v);
 
-  const last4Avg = prices.slice(-4).reduce((a, b) => a + b, 0) / 4;
+  const referenceWindow = Math.min(seriesMeta.referencePeriods, prices.length);
+  const referenceAvg = prices.slice(-referenceWindow).reduce((a, b) => a + b, 0) / Math.max(referenceWindow, 1);
   const current = series[series.length - 1];
-  const prev = series[series.length - 2];
+  const prev = series[series.length - 2] ?? current;
   const wowDelta = current.price - prev.price;
   const wowPct = (wowDelta / prev.price) * 100;
-  const favorable = current.price >= last4Avg;
+  const favorable = current.price >= referenceAvg;
 
-  return { xFn, yFn, linePath, areaPath, ticks, yMin, yMax, last4Avg, current, wowDelta, wowPct, favorable, slope, intercept, n };
+  return { xFn, yFn, linePath, areaPath, ticks, yMin, yMax, referenceAvg, current, wowDelta, wowPct, favorable, slope, intercept, n, seriesMeta, hasTrendLine };
 }
 
 export default function PriceChart({ series }: { series: CpoPoint[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const { xFn, yFn, linePath, areaPath, ticks, last4Avg, current, wowDelta, wowPct, favorable, slope, intercept, n } = buildChart(series);
+  const [isAverageHovered, setIsAverageHovered] = useState(false);
+
+  if (!series.length) {
+    return (
+      <div className="chart-wrap">
+        <div className="chart-head">
+          <div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+              CPO spot · Dumai port
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Awaiting recent price points.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { xFn, yFn, linePath, areaPath, ticks, referenceAvg, current, wowDelta, wowPct, favorable, slope, intercept, n, seriesMeta, hasTrendLine } = buildChart(series);
+  const showingAverageTooltip = isAverageHovered && hoveredIndex === null;
   const activeIndex = hoveredIndex ?? (series.length - 1);
   const activePoint = series[activeIndex];
   const activeX = xFn(activeIndex);
   const activeY = yFn(activePoint.price);
   const tooltipWidth = 92;
-  const tooltipX = Math.min(Math.max(activeX - tooltipWidth / 2, PAD_L), W - PAD_R - tooltipWidth);
-  const tooltipY = Math.max(activeY - 36, PAD_T + 4);
+  const averageY = yFn(referenceAvg);
+  const tooltipX = showingAverageTooltip
+    ? W - PAD_R - tooltipWidth
+    : Math.min(Math.max(activeX - tooltipWidth / 2, PAD_L), W - PAD_R - tooltipWidth);
+  const tooltipY = showingAverageTooltip
+    ? Math.max(averageY - 20, PAD_T + 4)
+    : Math.max(activeY - 36, PAD_T + 4);
 
   return (
-    <div className="chart-wrap" onMouseLeave={() => setHoveredIndex(null)}>
+    <div
+      className="chart-wrap"
+      onMouseLeave={() => {
+        setHoveredIndex(null);
+        setIsAverageHovered(false);
+      }}
+    >
       <div className="chart-head">
         <div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -97,13 +130,13 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-            4-week average{' '}
-            <span className="mono" style={{ color: 'var(--ink)' }}>{fmt(Math.round(last4Avg))}</span>
+            {seriesMeta.averageLabelLong}{' '}
+            <span className="mono" style={{ color: 'var(--ink)' }}>{fmt(Math.round(referenceAvg))}</span>
             {' '}· current is{' '}
             <span style={{ color: favorable ? 'var(--healthy)' : 'var(--monitor)', fontWeight: 500 }}>
               {favorable ? 'above' : 'below'}
             </span>
-            {' '}the 4-week mean → {favorable ? 'good window to dispatch' : 'consider holding'}
+            {' '}the {seriesMeta.isDailyWindow ? `${seriesMeta.referencePeriods}-day` : '4-week'} mean → {favorable ? 'good window to dispatch' : 'consider holding'}
           </div>
         </div>
         <div className="chart-legend">
@@ -111,13 +144,15 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
             <span className="swatch" style={{ background: 'var(--healthy)', height: 2 }} />
             CPO price
           </div>
-          <div className="item">
-            <span className="swatch" style={{ background: 'transparent', borderTop: '1.5px dashed var(--muted)', height: 0, width: 14 }} />
-            Trend
-          </div>
+          {!seriesMeta.isDailyWindow ? (
+            <div className="item">
+              <span className="swatch" style={{ background: 'transparent', borderTop: '1.5px dashed var(--muted)', height: 0, width: 14 }} />
+              Trend
+            </div>
+          ) : null}
           <div className="item">
             <span className="swatch" style={{ background: 'transparent', borderTop: '1px dashed var(--muted)', height: 0, width: 14 }} />
-            4-wk avg
+            {seriesMeta.averageLabelShort}
           </div>
         </div>
       </div>
@@ -140,22 +175,42 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
         ))}
 
         <line
-          x1={PAD_L} y1={yFn(last4Avg)}
-          x2={W - PAD_R} y2={yFn(last4Avg)}
+          x1={PAD_L} y1={averageY}
+          x2={W - PAD_R} y2={averageY}
           stroke="var(--muted)" strokeWidth="1" strokeDasharray="2 4"
         />
-        <text x={W - PAD_R - 4} y={yFn(last4Avg) - 5} textAnchor="end" fontSize="10.5" fill="var(--muted)">
-          4-wk avg
+        <line
+          x1={PAD_L}
+          y1={averageY}
+          x2={W - PAD_R}
+          y2={averageY}
+          stroke="transparent"
+          strokeWidth="10"
+          onMouseEnter={() => setIsAverageHovered(true)}
+          onMouseLeave={() => setIsAverageHovered(false)}
+        />
+        <text
+          x={W - PAD_R - 4}
+          y={averageY - 5}
+          textAnchor="end"
+          fontSize="10.5"
+          fill="var(--muted)"
+          onMouseEnter={() => setIsAverageHovered(true)}
+          onMouseLeave={() => setIsAverageHovered(false)}
+        >
+          {seriesMeta.averageLabelShort}
         </text>
 
         <path d={areaPath} fill="url(#chartFill)" />
         <path d={linePath} fill="none" stroke="var(--healthy)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
-        <line
-          x1={xFn(0)} y1={yFn(intercept)}
-          x2={xFn(n - 1)} y2={yFn(intercept + slope * (n - 1))}
-          stroke="var(--muted)" strokeWidth="1.25" strokeDasharray="4 4"
-        />
+        {hasTrendLine && !seriesMeta.isDailyWindow ? (
+          <line
+            x1={xFn(0)} y1={yFn(intercept)}
+            x2={xFn(n - 1)} y2={yFn(intercept + slope * (n - 1))}
+            stroke="var(--muted)" strokeWidth="1.25" strokeDasharray="4 4"
+          />
+        ) : null}
 
         <line
           x1={activeX} y1={PAD_T}
@@ -183,7 +238,7 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
         <g transform={`translate(${tooltipX},${tooltipY})`} pointerEvents="none">
           <rect x="0" y="-18" width={tooltipWidth} height="24" rx="6" fill="var(--ink)" />
           <text x={tooltipWidth / 2} y="-2" textAnchor="middle" fontSize="11" fill="var(--surface)" fontFamily="var(--font-mono)" fontWeight="500">
-            {fmt(activePoint.price)}
+            {fmt(Math.round(showingAverageTooltip ? referenceAvg : activePoint.price))}
           </text>
         </g>
 
@@ -194,6 +249,7 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
             textAnchor="middle" fontSize="11"
             fill={i === activeIndex ? 'var(--ink)' : 'var(--muted)'}
             fontWeight={i === activeIndex ? 600 : 400}
+            onMouseEnter={() => setIsAverageHovered(false)}
           >
             {p.week}
           </text>
