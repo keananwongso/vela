@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { USER } from '@/lib/data';
 
 type Tab = 'overview' | 'prices' | 'settings';
@@ -42,7 +43,7 @@ export default function Sidebar({ active }: { active: Tab }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="mark">V</div>
+        <Image src="/logo.png" alt="Vela" width={28} height={28} style={{ borderRadius: 6, objectFit: 'contain' }} />
         <div className="wordmark">Vela</div>
         <div className="tag">v3.4</div>
       </div>
