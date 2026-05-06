@@ -73,9 +73,15 @@ interface Props {
   districts: District[];
   selected: string;
   setSelected: (id: string) => void;
+  dateLabel?: string;
 }
 
-export default function RiauMap({ districts, selected, setSelected }: Props) {
+function metricValue(value: string | number | null | undefined, suffix = '') {
+  if (value === null || value === undefined || value === '') return '—';
+  return `${value}${suffix}`;
+}
+
+export default function RiauMap({ districts, selected, setSelected, dateLabel = 'Date unavailable' }: Props) {
   const [hover, setHover] = useState<RenderedRegion | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -171,7 +177,7 @@ export default function RiauMap({ districts, selected, setSelected }: Props) {
       )}
 
       <div className="legend">
-        <h4>Crop health · Apr 21</h4>
+        <h4>Crop health · {dateLabel}</h4>
         <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--healthy)' }} />Healthy — dispatch now</div>
         <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--monitor)' }} />Moderate — monitor</div>
         <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--risk)' }} />At risk — hold</div>
@@ -187,10 +193,9 @@ export default function RiauMap({ districts, selected, setSelected }: Props) {
             <StatusBadge status={selectedDistrict.status} />
           </div>
           <div className="callout-sub">{selectedDistrict.action}</div>
-          <div className="callout-row"><span>Yield (forecast)</span><span className="callout-val mono">{selectedDistrict.yield}</span></div>
-          <div className="callout-row"><span>Moisture</span><span className="callout-val mono">{selectedDistrict.moisture}</span></div>
-          <div className="callout-row"><span>Free fatty acid</span><span className="callout-val mono">{selectedDistrict.ffa}</span></div>
-          <div className="callout-row"><span>Trucks staged</span><span className="callout-val mono">{selectedDistrict.trucks}</span></div>
+          <div className="callout-row"><span>NDVI</span><span className="callout-val mono">{metricValue(selectedDistrict.ndvi?.toFixed(2))}</span></div>
+          <div className="callout-row"><span>CPO spot</span><span className="callout-val mono">{metricValue(selectedDistrict.cpo.toLocaleString('en-US'), ' IDR/kg')}</span></div>
+          <div className="callout-row"><span>Last updated</span><span className="callout-val mono">{metricValue(selectedDistrict.updatedAt ? dateLabel : null)}</span></div>
           <div className="callout-row"><span>Confidence</span><span className="callout-val mono">{selectedDistrict.confidence}%</span></div>
         </div>
       )}

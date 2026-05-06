@@ -9,16 +9,27 @@ type SortKey = 'status' | 'yield' | 'moisture' | 'ffa' | 'trucks';
 
 const STATUS_ORDER: Record<StatusKey, number> = { green: 0, amber: 1, red: 2 };
 
+function numericOrInfinity(value: string | number | null) {
+  if (value === null) return Number.POSITIVE_INFINITY;
+  if (typeof value === 'number') return value;
+  const parsed = parseFloat(value);
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+}
+
 function sortDistricts(districts: District[], key: SortKey, asc: boolean) {
   return [...districts].sort((a, b) => {
     let diff = 0;
     if (key === 'status') diff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    else if (key === 'yield') diff = parseFloat(a.yield) - parseFloat(b.yield);
-    else if (key === 'moisture') diff = parseFloat(a.moisture) - parseFloat(b.moisture);
-    else if (key === 'ffa') diff = parseFloat(a.ffa) - parseFloat(b.ffa);
-    else if (key === 'trucks') diff = a.trucks - b.trucks;
+    else if (key === 'yield') diff = numericOrInfinity(a.yield) - numericOrInfinity(b.yield);
+    else if (key === 'moisture') diff = numericOrInfinity(a.moisture) - numericOrInfinity(b.moisture);
+    else if (key === 'ffa') diff = numericOrInfinity(a.ffa) - numericOrInfinity(b.ffa);
+    else if (key === 'trucks') diff = numericOrInfinity(a.trucks) - numericOrInfinity(b.trucks);
     return asc ? diff : -diff;
   });
+}
+
+function displayMetric(value: string | number | null) {
+  return value === null ? '—' : value;
 }
 
 export default function DistrictsPage() {
@@ -94,12 +105,12 @@ export default function DistrictsPage() {
               >
                 <td>{d.name}</td>
                 <td><StatusBadge status={d.status} /></td>
-                <td className="mono">{d.ndvi.toFixed(2)}</td>
-                <td className="mono">{d.yield}</td>
-                <td className="mono">{d.moisture}</td>
-                <td className="mono">{d.ffa}</td>
-                <td className="mono">{d.trucks}</td>
-                <td className="mono" style={{ color: 'var(--muted)' }}>{d.eta}</td>
+                <td className="mono">{d.ndvi?.toFixed(2) ?? '—'}</td>
+                <td className="mono">{displayMetric(d.yield)}</td>
+                <td className="mono">{displayMetric(d.moisture)}</td>
+                <td className="mono">{displayMetric(d.ffa)}</td>
+                <td className="mono">{displayMetric(d.trucks)}</td>
+                <td className="mono" style={{ color: 'var(--muted)' }}>{displayMetric(d.eta)}</td>
                 <td style={{ color: 'color-mix(in srgb, var(--ink) 84%, var(--surface))' }}>{d.action}</td>
               </tr>
             ))}

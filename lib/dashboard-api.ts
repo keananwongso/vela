@@ -1,5 +1,5 @@
 import { CPO_SERIES, DISTRICTS } from '@/lib/data';
-import type { DashboardSnapshot, District, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
+import type { DashboardSnapshot, District, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
 
 type ApiRegionSummary = {
   id: string;
@@ -42,6 +42,61 @@ function getApiBaseUrl() {
   return (configured || 'http://127.0.0.1:8000').replace(/\/$/, '');
 }
 
+function parseTimestamp(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatMonthDay(value: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  }).format(value);
+}
+
+function formatDayLabel(value: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(value);
+}
+
+function getIsoWeek(date: Date) {
+  const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = normalized.getUTCDay() || 7;
+  normalized.setUTCDate(normalized.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(normalized.getUTCFullYear(), 0, 1));
+  return Math.ceil((((normalized.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function getOverviewMeta(syncTimestamp: string | null | undefined): OverviewMeta {
+  const syncDate = parseTimestamp(syncTimestamp);
+  if (!syncDate) {
+    return {
+      syncTimestamp: null,
+      weekLabel: 'Week --',
+      dateRangeLabel: 'Date unavailable',
+      dayLabel: 'Date unavailable',
+    };
+  }
+
+  const isoDay = syncDate.getUTCDay() || 7;
+  const rangeStart = new Date(syncDate);
+  rangeStart.setUTCDate(syncDate.getUTCDate() - (isoDay - 1));
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setUTCDate(rangeStart.getUTCDate() + 6);
+
+  return {
+    syncTimestamp: syncTimestamp ?? null,
+    weekLabel: `Week ${getIsoWeek(syncDate)}`,
+    dateRangeLabel: `${formatMonthDay(rangeStart)} – ${formatMonthDay(rangeEnd)}, ${rangeEnd.getUTCFullYear()}`,
+    dayLabel: formatDayLabel(syncDate),
+  };
+}
+
 function getFallbackPrices(): PriceSnapshot {
   return {
     commodity: 'cpo',
@@ -55,9 +110,11 @@ function getFallbackPrices(): PriceSnapshot {
 }
 
 function getFallbackSnapshot(): DashboardSnapshot {
+  const meta = getOverviewMeta('2026-04-21T07:38:00Z');
   return {
     districts: DISTRICTS,
     prices: getFallbackPrices(),
+    meta,
     source: 'mock',
   };
 }
@@ -102,14 +159,19 @@ function buildDistricts(apiRegions: ApiRegionSummary[] | undefined, prices: Pric
     const cpo = region.latestPrice ?? prices.currentPrice ?? fallback.cpo;
 
     return {
-      ...fallback,
+      id: fallback.id,
       name: region.name,
       status: region.status,
       action: region.action,
-      ndvi: region.ndvi ?? fallback.ndvi,
-      confidence: normalizeConfidence(region.confidence, fallback.confidence),
       cpo,
       cpoNote: cpo >= last4Avg ? 'favorable' : 'caution',
+      yield: null,
+      ndvi: region.ndvi ?? fallback.ndvi,
+      moisture: null,
+      ffa: null,
+      trucks: null,
+      eta: null,
+      confidence: normalizeConfidence(region.confidence, fallback.confidence),
       updatedAt: region.updatedAt ?? fallback.updatedAt,
     };
   });
@@ -141,10 +203,15 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
 
   const prices = buildPriceSnapshot(apiPrices);
   const districts = buildDistricts(apiRegions, prices);
+  const syncTimestamp =
+    (regionsResult.status === 'fulfilled' ? regionsResult.value.summary?.lastSync : undefined)
+      ?? apiPrices?.lastUpdated
+      ?? null;
 
   return {
     districts,
     prices,
+    meta: getOverviewMeta(syncTimestamp),
     source: apiRegions && apiPrices ? 'api' : 'mixed',
   };
 }

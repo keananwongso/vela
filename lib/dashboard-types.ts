@@ -9,14 +9,21 @@ export interface District {
   action: string;
   cpo: number;
   cpoNote: CpoNote;
-  yield: string;
-  ndvi: number;
-  moisture: string;
-  ffa: string;
-  trucks: number;
-  eta: string;
+  yield: string | null;
+  ndvi: number | null;
+  moisture: string | null;
+  ffa: string | null;
+  trucks: number | null;
+  eta: string | null;
   confidence: number;
   updatedAt?: string;
+}
+
+export interface OverviewMeta {
+  syncTimestamp: string | null;
+  weekLabel: string;
+  dateRangeLabel: string;
+  dayLabel: string;
 }
 
 export interface CpoPoint {
@@ -39,6 +46,7 @@ export interface PriceSnapshot {
 export interface DashboardSnapshot {
   districts: District[];
   prices: PriceSnapshot;
+  meta: OverviewMeta;
   source: 'api' | 'mock' | 'mixed';
 }
 

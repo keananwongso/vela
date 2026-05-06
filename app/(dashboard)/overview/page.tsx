@@ -16,6 +16,27 @@ function sentenceCase(value: string) {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
+function formatWeekCode(weekLabel: string) {
+  return weekLabel.replace('Week ', 'W');
+}
+
+function formatSignalTimestamp(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Jakarta',
+  });
+}
+
+function metricOrUnavailable(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') return '—';
+  return typeof value === 'number' ? value.toString() : value;
+}
+
 function buildWeeklyActionStatement(
   healthy: string[],
   monitor: string[],
@@ -42,7 +63,7 @@ const STATUS_COPY = {
 export default function OverviewPage() {
   const [selected, setSelected] = useState('kampar');
   const [viewMode, setViewMode] = useState<OverviewViewMode>('simple');
-  const { districts, prices, source } = useDashboardData();
+  const { districts, prices, source, meta } = useDashboardData();
 
   useEffect(() => {
     try {
@@ -78,10 +99,25 @@ export default function OverviewPage() {
   const previous = prices.series[prices.series.length - 2] ?? current;
   const last4Avg = prices.series.slice(-4).reduce((sum, point) => sum + point.price, 0) / Math.min(4, prices.series.length);
   const priceDelta = current.price - previous.price;
-  const totalTrucks = districts.reduce((sum, district) => sum + district.trucks, 0);
   const healthyDistricts = districts.filter((district) => district.status === 'green');
   const monitorDistricts = districts.filter((district) => district.status === 'amber');
   const riskDistricts = districts.filter((district) => district.status === 'red');
+  const averageConfidence = districts.length
+    ? Math.round(districts.reduce((sum, district) => sum + district.confidence, 0) / districts.length)
+    : 0;
+  const averageNdvi = districts.length
+    ? districts.reduce((sum, district) => sum + (district.ndvi ?? 0), 0) / districts.length
+    : 0;
+  const modelTraceLines = [
+    ...districts.slice(0, 4).map((district) => ({
+      time: formatSignalTimestamp(district.updatedAt, '—'),
+      text: `${district.name} ${district.action.toLowerCase()}. Confidence ${district.confidence}%.`,
+    })),
+    {
+      time: formatSignalTimestamp(meta.syncTimestamp ?? current.timestamp, '—'),
+      text: `CPO ${current.price >= last4Avg ? 'above' : 'below'} 4-week mean; procurement bias ${current.price >= last4Avg ? 'favorable' : 'cautious'}.`,
+    },
+  ];
   const weeklyActionStatement = buildWeeklyActionStatement(
     healthyDistricts.map((district) => district.name),
     monitorDistricts.map((district) => district.name),
@@ -106,7 +142,7 @@ export default function OverviewPage() {
     <>
       <div className="topbar">
         <div>
-          <div className="crumb">Riau Province · Week 17 · Apr 15 – Apr 21, 2026</div>
+          <div className="crumb">Riau Province · {meta.weekLabel} · {meta.dateRangeLabel}</div>
           <h1 className="page-title">Procurement overview</h1>
           <div className="page-sub">
             Dispatch decisions for {districts.length} kecamatan · {source === 'mock' ? 'mock fallback active' : 'API-backed snapshot'}
@@ -145,7 +181,7 @@ export default function OverviewPage() {
             </div>
             <button className="btn primary">
               <span className="dot" />
-              Dispatch plan · 13 trucks
+              Dispatch plan · {healthyDistricts.length} districts
             </button>
           </div>
         </div>
@@ -155,10 +191,10 @@ export default function OverviewPage() {
         <>
           <section className="simple-decision">
             <div className="simple-action-hero">
-              <div className="simple-eyebrow">Week 17 decision brief</div>
+              <div className="simple-eyebrow">{meta.weekLabel} decision brief</div>
               <p>{weeklyActionStatement}</p>
               <div className="simple-hero-meta">
-                <span><strong className="mono">{totalTrucks}</strong> trucks staged</span>
+                <span><strong className="mono">{healthyDistricts.length}</strong> districts ready</span>
                 <span><strong className="mono">{current.price.toLocaleString('en-US')}</strong> IDR/kg CPO</span>
                 <span><strong className="mono">{Math.round(last4Avg).toLocaleString('en-US')}</strong> 4-week avg</span>
               </div>
@@ -211,7 +247,7 @@ export default function OverviewPage() {
             <div className="terminal-titlebar">
               <div>
                 <span>VELA // RIAU PROCUREMENT TERMINAL</span>
-                <strong>WEEK 17 / APR 21 / MOCK DATA</strong>
+                <strong>{meta.weekLabel.toUpperCase()} / {meta.dayLabel.toUpperCase()} / LIVE SNAPSHOT</strong>
               </div>
               <div className="terminal-status">
                 <span className="terminal-led" />
@@ -221,14 +257,14 @@ export default function OverviewPage() {
 
             <div className="terminal-command">
               <span>VELA&gt;</span>
-              <code>EXPLAIN DISPATCH /REGION=RIAU /WINDOW=W17 /CONFIDENCE=0.86</code>
+              <code>EXPLAIN DISPATCH /REGION=RIAU /WINDOW={formatWeekCode(meta.weekLabel)} /CONFIDENCE={averageConfidence}%</code>
             </div>
 
             <div className="terminal-tape">
               <div><span>READY</span><strong className="mono">{counts.green || 0}/{districts.length}</strong><em>+1 WoW</em></div>
               <div><span>CPO DUMAI</span><strong className="mono">{current.price.toLocaleString('en-US')}</strong><em>+{priceDelta.toLocaleString('en-US')}</em></div>
-              <div><span>INTAKE</span><strong className="mono">2,840</strong><em>tonnes FFB</em></div>
-              <div><span>FLEET</span><strong className="mono">78%</strong><em>{totalTrucks} staged</em></div>
+              <div><span>NDVI AVG</span><strong className="mono">{averageNdvi.toFixed(2)}</strong><em>5 tracked districts</em></div>
+              <div><span>LAST SYNC</span><strong className="mono">{metricOrUnavailable(meta.dayLabel)}</strong><em>{metricOrUnavailable(meta.syncTimestamp ? 'live API' : null)}</em></div>
               <div><span>RISK</span><strong className="mono">{counts.red || 0}</strong><em>district avoid</em></div>
             </div>
 
@@ -236,9 +272,9 @@ export default function OverviewPage() {
               <div className="terminal-panel terminal-map-panel">
                 <div className="terminal-panel-head">
                   <span>CHOROPLETH / CROP HEALTH</span>
-                  <strong>NDVI + moisture + FFA</strong>
+                  <strong>NDVI + live recommendation status</strong>
                 </div>
-                <RiauMap districts={districts} selected={selected} setSelected={setSelected} />
+                <RiauMap districts={districts} selected={selected} setSelected={setSelected} dateLabel={meta.dayLabel} />
               </div>
 
               <div className="terminal-panel">
@@ -252,8 +288,8 @@ export default function OverviewPage() {
                       <th>District</th>
                       <th>Signal</th>
                       <th>NDVI</th>
-                      <th>Moisture</th>
-                      <th>Trucks</th>
+                      <th>Confidence</th>
+                      <th>Updated</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -261,9 +297,9 @@ export default function OverviewPage() {
                       <tr key={district.id} onClick={() => setSelected(district.id)}>
                         <td>{district.name}</td>
                         <td><span className={`terminal-signal ${district.status}`}>{STATUS_COPY[district.status].label}</span></td>
-                        <td className="mono">{district.ndvi.toFixed(2)}</td>
-                        <td className="mono">{district.moisture}</td>
-                        <td className="mono">{district.trucks}</td>
+                        <td className="mono">{district.ndvi?.toFixed(2) ?? '—'}</td>
+                        <td className="mono">{district.confidence}%</td>
+                        <td className="mono">{district.updatedAt ? meta.dayLabel : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -284,11 +320,9 @@ export default function OverviewPage() {
                   <strong>Why the recommendation changed</strong>
                 </div>
                 <div className="terminal-feed">
-                  <p><span>09:00</span> Kampar yield window open; FFA below penalty threshold.</p>
-                  <p><span>09:04</span> Rokan Hilir route window clear for <strong className="mono">18 hrs</strong>.</p>
-                  <p><span>09:08</span> Pelalawan moisture rising; hold pending next weather pass.</p>
-                  <p><span>09:11</span> Indragiri Hulu risk elevated; avoid truck allocation this week.</p>
-                  <p><span>09:14</span> CPO above 4-week mean; procurement bias remains favorable.</p>
+                  {modelTraceLines.map((line) => (
+                    <p key={`${line.time}-${line.text}`}><span>{line.time}</span> {line.text}</p>
+                  ))}
                 </div>
               </div>
             </div>
