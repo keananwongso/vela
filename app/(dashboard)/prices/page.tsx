@@ -5,12 +5,10 @@ import { useDashboardData } from '@/components/dashboard-data-provider';
 import PriceChart from '@/components/chart';
 import { getPriceSeriesMeta } from '@/lib/price-window';
 
-const CHART_TABS = ['4w', '8w', '26w', '52w'] as const;
+const CHART_TABS = ['4w', '8w'] as const;
 const WEEKS_BY_TAB: Record<(typeof CHART_TABS)[number], number> = {
   '4w': 4,
   '8w': 8,
-  '26w': 26,
-  '52w': 52,
 };
 
 function fmt(n: number) {

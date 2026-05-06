@@ -416,17 +416,6 @@ body {
   position: relative;
   padding: 18px;
 }
-.simple-action-group::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-}
-.simple-action-group.green::before { background: var(--healthy); }
-.simple-action-group.amber::before { background: var(--monitor); }
-.simple-action-group.red::before { background: var(--risk); }
 .simple-group-head {
   display: flex;
   align-items: flex-start;
