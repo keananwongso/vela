@@ -31,20 +31,29 @@ The root route redirects to `/overview`.
 
 ## Backend setup
 
-Create a local env file from `.env.example`, then install the Python backend dependencies:
+Create and activate a virtual environment, copy `.env.example` to `.env`, then install the Python backend dependencies:
 
 ```bash
-python -m pip install -r backend/requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+cp .env.example .env
+python3 -m pip install -r backend/requirements.txt
 ```
 
-Seed MongoDB Atlas and start the FastAPI server:
+Seed the canonical regions and start the FastAPI server:
 
 ```bash
-python -m backend.seed
-uvicorn backend.main:app --reload
+python3 -m backend.seed_regions
+python3 -m uvicorn backend.main:app --reload
 ```
 
-The frontend reads from `NEXT_PUBLIC_API_BASE_URL` and falls back to local mock data if the API is unavailable.
+Optional: seed the broader demo dataset for the dashboard prototype:
+
+```bash
+python3 -m backend.seed
+```
+
+The frontend reads from `NEXT_PUBLIC_API_BASE_URL` and falls back to local mock data if the API is unavailable. The n8n pipeline should POST to `https://<render-or-railway-service>/api/ingest` once the Python backend is deployed.
 
 ## Available scripts
 
@@ -80,8 +89,7 @@ lib/
 
 ## Notes
 
-- This project currently uses local mock data only
+- This project includes a FastAPI backend for MongoDB Atlas reads and n8n ingestion
 - The Riau map uses a committed, Riau-only subset of geoBoundaries `gbOpen` Indonesia ADM2 simplified GeoJSON, derived from BPS/WFP/OCHA boundary data under the license reported by the geoBoundaries metadata endpoint
-- There is no backend or database wired up yet
 - `vercel.json` is included for deployment on Vercel
 - `INTEGRATION_SPEC.md` defines the MongoDB, n8n, and FastAPI contract for the next integration phase
