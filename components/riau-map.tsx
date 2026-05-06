@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { geoCentroid, geoMercator, geoPath } from 'd3-geo';
 import riauAdm2 from '@/lib/geo/riau-adm2.json';
 import { MAP_REGIONS } from '@/lib/data';
-import type { District, StatusKey } from '@/lib/dashboard-types';
+import type { District, DistrictDetail, StatusKey } from '@/lib/dashboard-types';
 import StatusBadge from './status-badge';
 
 const SVG_WIDTH = 880;
@@ -31,17 +31,25 @@ type RenderedRegion = {
 const FILL: Record<string, string> = {
   green: 'var(--healthy)',
   amber: 'var(--monitor)',
-  red:   'var(--risk)',
+  red: 'var(--risk)',
 };
 
 function fillFor(status: StatusKey | null) {
   return status ? FILL[status] : 'var(--border)';
 }
 
-function statusHint(status: StatusKey | null) {
+function decisionLabelForStatus(status: StatusKey | null) {
+  if (status === 'green') return 'Send now';
+  if (status === 'amber') return 'Wait';
+  if (status === 'red') return 'Do not send';
+  return 'No active recommendation';
+}
+
+function statusHint(status: StatusKey | null, mode: 'simple' | 'terminal') {
+  if (mode === 'simple') return decisionLabelForStatus(status);
   if (status === 'green') return 'Healthy — dispatch now';
   if (status === 'amber') return 'Monitor — hold this week';
-  if (status === 'red')   return 'At risk — hold';
+  if (status === 'red') return 'At risk — hold';
   return 'No active recommendation';
 }
 
@@ -74,6 +82,8 @@ interface Props {
   selected: string;
   setSelected: (id: string) => void;
   dateLabel?: string;
+  detail?: DistrictDetail | null;
+  mode?: 'simple' | 'terminal';
 }
 
 function metricValue(value: string | number | null | undefined, suffix = '') {
@@ -81,19 +91,31 @@ function metricValue(value: string | number | null | undefined, suffix = '') {
   return `${value}${suffix}`;
 }
 
-export default function RiauMap({ districts, selected, setSelected, dateLabel = 'Date unavailable' }: Props) {
+function formatRainProbability(value: number | null) {
+  if (value === null || Number.isNaN(value)) return '—';
+  return `${Math.round(value * 100)}%`;
+}
+
+export default function RiauMap({
+  districts,
+  selected,
+  setSelected,
+  dateLabel = 'Date unavailable',
+  detail = null,
+  mode = 'terminal',
+}: Props) {
   const [hover, setHover] = useState<RenderedRegion | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const districtsById = new Map(districts.map((district) => [district.id, district]));
-  const selectedDistrict = districts.find((d) => d.id === selected);
+  const selectedDistrict = districts.find((district) => district.id === selected);
   const selectableDistrictIds = new Set(districts.map((district) => district.id));
 
-  function onMove(e: React.MouseEvent, r: RenderedRegion) {
+  function onMove(e: React.MouseEvent, region: RenderedRegion) {
     const rect = wrapRef.current!.getBoundingClientRect();
     setTipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    setHover(r);
+    setHover(region);
   }
 
   return (
@@ -114,48 +136,50 @@ export default function RiauMap({ districts, selected, setSelected, dateLabel = 
         <rect width="880" height="480" fill="url(#hatch)" />
 
         <text x="820" y="60" textAnchor="end" fontSize="11" fill="rgba(15,26,31,0.35)" fontStyle="italic">Selat Malaka</text>
-        <text x="60"  y="450" fontSize="11" fill="rgba(15,26,31,0.35)" fontStyle="italic">Sumatera Barat →</text>
+        <text x="60" y="450" fontSize="11" fill="rgba(15,26,31,0.35)" fontStyle="italic">Sumatera Barat →</text>
 
         <g filter="url(#softShadow)">
-          {renderedRegions.map((r) => (
+          {renderedRegions.map((region) => (
             <path
-              key={r.id}
-              d={r.d}
-              className={`map-region${selected === r.id ? ' selected' : ''}${selectableDistrictIds.has(r.id) ? '' : ' inactive'}`}
-              fill={fillFor(districtsById.get(r.id)?.status ?? null)}
-              fillOpacity={districtsById.get(r.id)?.status ? 0.92 : 1}
-              onMouseMove={(e) => onMove(e, r)}
+              key={region.id}
+              d={region.d}
+              className={`map-region${selected === region.id ? ' selected' : ''}${selectableDistrictIds.has(region.id) ? '' : ' inactive'}`}
+              fill={fillFor(districtsById.get(region.id)?.status ?? null)}
+              fillOpacity={districtsById.get(region.id)?.status ? 0.92 : 1}
+              onMouseMove={(event) => onMove(event, region)}
               onClick={() => {
-                if (selectableDistrictIds.has(r.id)) setSelected(r.id);
+                if (selectableDistrictIds.has(region.id)) setSelected(region.id);
               }}
             />
           ))}
         </g>
 
-        {renderedRegions.filter((r) => districtsById.get(r.id)?.status).map((r) => (
+        {renderedRegions.filter((region) => districtsById.get(region.id)?.status).map((region) => (
           <text
-            key={`lbl-${r.id}`}
-            x={r.label[0]} y={r.label[1]}
+            key={`lbl-${region.id}`}
+            x={region.label[0]}
+            y={region.label[1]}
             textAnchor="middle"
             fontSize="9.5"
             fontWeight="600"
             fill="rgba(15,26,31,0.85)"
             style={{ pointerEvents: 'none', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
-            {r.name}
+            {region.name}
           </text>
         ))}
-        {renderedRegions.filter((r) => !districtsById.get(r.id)?.status).map((r) => (
+        {renderedRegions.filter((region) => !districtsById.get(region.id)?.status).map((region) => (
           <text
-            key={`lbl-${r.id}`}
-            x={r.label[0]} y={r.label[1]}
+            key={`lbl-${region.id}`}
+            x={region.label[0]}
+            y={region.label[1]}
             textAnchor="middle"
             fontSize="9"
             fontWeight="500"
             fill="rgba(15,26,31,0.55)"
             style={{ pointerEvents: 'none', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
-            {r.name}
+            {region.name}
           </text>
         ))}
 
@@ -167,36 +191,48 @@ export default function RiauMap({ districts, selected, setSelected, dateLabel = 
       </svg>
 
       {hover && (
-        <div
-          className="map-tooltip"
-          style={{ left: tipPos.x, top: tipPos.y }}
-        >
+        <div className="map-tooltip" style={{ left: tipPos.x, top: tipPos.y }}>
           <div>{hover.name}</div>
-          <div className="tip-sub">{statusHint(districtsById.get(hover.id)?.status ?? null)}</div>
+          <div className="tip-sub">{statusHint(districtsById.get(hover.id)?.status ?? null, mode)}</div>
         </div>
       )}
 
       <div className="legend">
-        <h4>Crop health · {dateLabel}</h4>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--healthy)' }} />Healthy — dispatch now</div>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--monitor)' }} />Moderate — monitor</div>
-        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--risk)' }} />At risk — hold</div>
+        <h4>{mode === 'simple' ? `Dispatch map · ${dateLabel}` : `Crop health · ${dateLabel}`}</h4>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--healthy)' }} />{mode === 'simple' ? 'Send now' : 'Healthy — dispatch now'}</div>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--monitor)' }} />{mode === 'simple' ? 'Wait' : 'Moderate — monitor'}</div>
+        <div className="legend-row"><span className="legend-swatch" style={{ background: 'var(--risk)' }} />{mode === 'simple' ? 'Do not send' : 'At risk — hold'}</div>
         <div className="legend-row" style={{ marginTop: 4, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
           <span className="legend-swatch" style={{ background: 'var(--border)' }} />No active recommendation
         </div>
       </div>
 
       {selectedDistrict && (
-        <div className="map-callout">
-          <div className="callout-name">
-            {selectedDistrict.name}
-            <StatusBadge status={selectedDistrict.status} />
-          </div>
-          <div className="callout-sub">{selectedDistrict.action}</div>
-          <div className="callout-row"><span>NDVI</span><span className="callout-val mono">{metricValue(selectedDistrict.ndvi?.toFixed(2))}</span></div>
-          <div className="callout-row"><span>CPO spot</span><span className="callout-val mono">{metricValue(selectedDistrict.cpo.toLocaleString('en-US'), ' IDR/kg')}</span></div>
-          <div className="callout-row"><span>Last updated</span><span className="callout-val mono">{metricValue(selectedDistrict.updatedAt ? dateLabel : null)}</span></div>
-          <div className="callout-row"><span>Confidence</span><span className="callout-val mono">{selectedDistrict.confidence}%</span></div>
+        <div className={`map-callout${mode === 'simple' ? ' simple' : ''}`}>
+          {mode === 'simple' ? (
+            <>
+              <div className="callout-name-row">
+                <div className="callout-name">{selectedDistrict.name}</div>
+                <span className={`map-decision-pill ${selectedDistrict.status}`}>{detail?.decisionLabel ?? decisionLabelForStatus(selectedDistrict.status)}</span>
+              </div>
+              <div className="callout-sub">{detail?.reason ?? selectedDistrict.action}</div>
+              <div className="callout-note">{detail?.riskNote ?? 'Review route and quality risk before sending trucks.'}</div>
+              <div className="callout-row"><span>Rainfall risk</span><span className="callout-val mono">{formatRainProbability(detail?.rainfallProbability ?? null)}</span></div>
+              <div className="callout-row"><span>Last updated</span><span className="callout-val mono">{metricValue(detail?.updatedAt ? dateLabel : selectedDistrict.updatedAt ? dateLabel : null)}</span></div>
+            </>
+          ) : (
+            <>
+              <div className="callout-name">
+                {selectedDistrict.name}
+                <StatusBadge status={selectedDistrict.status} />
+              </div>
+              <div className="callout-sub">{selectedDistrict.action}</div>
+              <div className="callout-row"><span>NDVI</span><span className="callout-val mono">{metricValue(selectedDistrict.ndvi?.toFixed(2))}</span></div>
+              <div className="callout-row"><span>CPO spot</span><span className="callout-val mono">{metricValue(selectedDistrict.cpo.toLocaleString('en-US'), ' IDR/kg')}</span></div>
+              <div className="callout-row"><span>Last updated</span><span className="callout-val mono">{metricValue(selectedDistrict.updatedAt ? dateLabel : null)}</span></div>
+              <div className="callout-row"><span>Confidence</span><span className="callout-val mono">{selectedDistrict.confidence}%</span></div>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { CPO_RECENT_BACKFILL_SERIES, DISTRICTS } from '@/lib/data';
-import type { DashboardSnapshot, District, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
+import type { DashboardSnapshot, District, DistrictDetail, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
 
 type ApiRegionSummary = {
   id: string;
@@ -35,6 +35,30 @@ type ApiPricesResponse = {
   lastUpdated: string;
   series: ApiPricePoint[];
   ffbReference?: number | null;
+};
+
+type ApiRegionLatestResponse = {
+  region: {
+    id: string;
+    name: string;
+  };
+  recommendation: {
+    cropHealth: string | null;
+    status: StatusKey | null;
+    action: string | null;
+    priceSignal: string | null;
+    confidence: number | null;
+    generatedAt: string | null;
+  };
+  signals: {
+    ndvi: number | null;
+    rainfallProbability: number | null;
+    temperatureMin: number | null;
+    temperatureMax: number | null;
+    windCondition: string | null;
+    cpoPrice: number | null;
+    ffbPrice: number | null;
+  };
 };
 
 function getApiBaseUrl() {
@@ -146,6 +170,104 @@ function normalizeConfidence(confidence: number | null | undefined, fallback: nu
   return Math.round(confidence);
 }
 
+function normalizeOptionalConfidence(confidence: number | null | undefined, fallback: number | null = null) {
+  if (typeof confidence !== 'number' || Number.isNaN(confidence)) return fallback;
+  if (confidence <= 1) return Math.round(confidence * 100);
+  return Math.round(confidence);
+}
+
+function decisionLabelForStatus(status: StatusKey) {
+  if (status === 'green') return 'Send now';
+  if (status === 'amber') return 'Wait';
+  return 'Do not send';
+}
+
+function buildFallbackPriceSignal(district: District) {
+  return district.cpoNote === 'favorable'
+    ? 'CPO is above the recent average, so procurement pricing supports collection.'
+    : 'CPO is soft versus the recent average, so be selective with procurement.';
+}
+
+function extractActionReason(action: string, status: StatusKey) {
+  const parts = action.split(/\s+[—-]\s+/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length > 1) return parts.slice(1).join('. ');
+  if (status === 'green') return 'Crop conditions and route timing look workable this week.';
+  if (status === 'amber') return 'Conditions are mixed, so it is safer to wait before assigning trucks.';
+  return 'Field and route risk are too high for dispatch this week.';
+}
+
+function buildRiskNote(
+  status: StatusKey,
+  rainfallProbability: number | null,
+  district: Pick<District, 'moisture' | 'ffa'>,
+) {
+  if (typeof rainfallProbability === 'number' && !Number.isNaN(rainfallProbability)) {
+    const rainPct = Math.round(rainfallProbability * 100);
+
+    if (status === 'green') {
+      return rainPct >= 45
+        ? `Rain risk is ${rainPct}%, so confirm road access before dispatch.`
+        : `Rain risk is ${rainPct}%, which still leaves a workable pickup window.`;
+    }
+
+    if (status === 'amber') {
+      return `Rain risk is ${rainPct}%, so sending trucks now could lead to delays or weaker intake quality.`;
+    }
+
+    return `Rain risk is ${rainPct}%, so dispatching here would likely waste fleet time this week.`;
+  }
+
+  if (status === 'amber' && district.moisture) {
+    return `Moisture is already at ${district.moisture}, so waiting reduces the chance of weaker intake quality.`;
+  }
+
+  if (status === 'red' && district.ffa) {
+    return `FFA is tracking around ${district.ffa}, so collecting now increases the risk of poor-quality intake.`;
+  }
+
+  if (status === 'green') return 'The main risk is a late weather change, so confirm the route before trucks leave.';
+  if (status === 'amber') return 'Moving too early could create delays, uneven loading, or weaker fruit quality.';
+  return 'Sending trucks now could tie up fleet capacity without enough good fruit to justify the trip.';
+}
+
+export function buildFallbackDistrictDetail(district: District): DistrictDetail {
+  return {
+    id: district.id,
+    name: district.name,
+    status: district.status,
+    decisionLabel: decisionLabelForStatus(district.status),
+    reason: extractActionReason(district.action, district.status),
+    riskNote: buildRiskNote(district.status, null, district),
+    priceSignal: buildFallbackPriceSignal(district),
+    rainfallProbability: null,
+    confidence: district.confidence,
+    ndvi: district.ndvi,
+    cpoPrice: district.cpo,
+    updatedAt: district.updatedAt ?? null,
+  };
+}
+
+function buildRegionLatestDetail(apiDetail: ApiRegionLatestResponse, fallbackDistrict?: District): DistrictDetail {
+  const district = fallbackDistrict ?? DISTRICTS.find((candidate) => candidate.id === apiDetail.region.id);
+  const fallback = district ? buildFallbackDistrictDetail(district) : null;
+  const status = apiDetail.recommendation.status ?? district?.status ?? 'amber';
+
+  return {
+    id: apiDetail.region.id,
+    name: apiDetail.region.name ?? district?.name ?? apiDetail.region.id,
+    status,
+    decisionLabel: decisionLabelForStatus(status),
+    reason: extractActionReason(apiDetail.recommendation.action ?? district?.action ?? 'Hold this week', status),
+    riskNote: buildRiskNote(status, apiDetail.signals.rainfallProbability, district ?? { moisture: null, ffa: null }),
+    priceSignal: apiDetail.recommendation.priceSignal ?? fallback?.priceSignal ?? 'Price context is unavailable for this district.',
+    rainfallProbability: apiDetail.signals.rainfallProbability,
+    confidence: normalizeOptionalConfidence(apiDetail.recommendation.confidence, fallback?.confidence ?? null),
+    ndvi: apiDetail.signals.ndvi ?? fallback?.ndvi ?? null,
+    cpoPrice: apiDetail.signals.cpoPrice ?? fallback?.cpoPrice ?? null,
+    updatedAt: apiDetail.recommendation.generatedAt ?? fallback?.updatedAt ?? null,
+  };
+}
+
 function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
   if (!apiPrices || !apiPrices.series.length) return getFallbackPrices();
 
@@ -196,12 +318,12 @@ function buildDistricts(apiRegions: ApiRegionSummary[] | undefined, prices: Pric
       action: region.action,
       cpo,
       cpoNote: cpo >= last4Avg ? 'favorable' : 'caution',
-      yield: null,
+      yield: fallback.yield,
       ndvi: region.ndvi ?? fallback.ndvi,
-      moisture: null,
-      ffa: null,
-      trucks: null,
-      eta: null,
+      moisture: fallback.moisture,
+      ffa: fallback.ffa,
+      trucks: fallback.trucks,
+      eta: fallback.eta,
       confidence: normalizeConfidence(region.confidence, fallback.confidence),
       updatedAt: region.updatedAt ?? fallback.updatedAt,
     };
@@ -249,4 +371,9 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
 
 export function getFallbackDashboardSnapshot() {
   return getFallbackSnapshot();
+}
+
+export async function fetchRegionLatest(regionId: string, fallbackDistrict?: District): Promise<DistrictDetail> {
+  const detail = await fetchJson<ApiRegionLatestResponse>(`/regions/${regionId}/latest`);
+  return buildRegionLatestDetail(detail, fallbackDistrict);
 }

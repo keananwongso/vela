@@ -50,6 +50,21 @@ export interface DashboardSnapshot {
   source: 'api' | 'mock' | 'mixed';
 }
 
+export interface DistrictDetail {
+  id: string;
+  name: string;
+  status: StatusKey;
+  decisionLabel: string;
+  reason: string;
+  riskNote: string;
+  priceSignal: string;
+  rainfallProbability: number | null;
+  confidence: number | null;
+  ndvi: number | null;
+  cpoPrice: number | null;
+  updatedAt: string | null;
+}
+
 export interface MapRegion {
   id: string;
   name: string;
