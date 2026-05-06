@@ -63,6 +63,19 @@ export default function Sidebar({ active }: { active: Tab }) {
       </nav>
 
       <div className="sidebar-foot">
+        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+            Weather data
+          </div>
+          <a
+            href="https://data.bmkg.go.id/prakiraan-cuaca/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}
+          >
+            BMKG — Badan Meteorologi,<br />Klimatologi, dan Geofisika
+          </a>
+        </div>
         <div className="sidebar-user">
           <div className="avatar">{USER.initials}</div>
           <div>
