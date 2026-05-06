@@ -980,7 +980,12 @@ body {
   flex-shrink: 0;
 }
 .chart-legend .item { display: flex; align-items: center; gap: 6px; }
-.chart-svg { display: block; width: 100%; height: 220px; }
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 920 / 220;
+}
 
 .foot {
   display: flex;

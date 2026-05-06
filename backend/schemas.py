@@ -28,11 +28,11 @@ class IngestPayload(BaseModel):
     ndvi_previous: float
     ndvi_source: str
     rain_probability: float
-    heavy_rain_day: str
-    cpo_price: str
+    heavy_rain_day: str | None = None
+    cpo_price: str | None = None
     cpo_price_raw: float
-    tbs_price: str
-    period: str
+    tbs_price: str | None = None
+    period: str | None = None
     price_trend: str
 
     @field_validator("region_id")

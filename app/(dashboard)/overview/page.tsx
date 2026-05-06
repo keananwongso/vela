@@ -32,6 +32,12 @@ function formatSignalTimestamp(value: string | undefined, fallback: string) {
   });
 }
 
+function parseTimeValue(value: string | null | undefined) {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 function metricOrUnavailable(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') return '—';
   return typeof value === 'number' ? value.toString() : value;
@@ -108,16 +114,24 @@ export default function OverviewPage() {
   const averageNdvi = districts.length
     ? districts.reduce((sum, district) => sum + (district.ndvi ?? 0), 0) / districts.length
     : 0;
-  const modelTraceLines = [
-    ...districts.slice(0, 4).map((district) => ({
+  const districtTraceLines = [...districts]
+    .sort((a, b) => {
+      const aTime = parseTimeValue(a.updatedAt) ?? Number.NEGATIVE_INFINITY;
+      const bTime = parseTimeValue(b.updatedAt) ?? Number.NEGATIVE_INFINITY;
+      if (aTime !== bTime) return aTime - bTime;
+      return a.name.localeCompare(b.name);
+    })
+    .map((district) => ({
+      sortValue: parseTimeValue(district.updatedAt) ?? Number.NEGATIVE_INFINITY,
       time: formatSignalTimestamp(district.updatedAt, '—'),
       text: `${district.name} ${district.action.toLowerCase()}. Confidence ${district.confidence}%.`,
-    })),
-    {
-      time: formatSignalTimestamp(meta.syncTimestamp ?? current.timestamp, '—'),
-      text: `CPO ${current.price >= last4Avg ? 'above' : 'below'} 4-week mean; procurement bias ${current.price >= last4Avg ? 'favorable' : 'cautious'}.`,
-    },
-  ];
+    }));
+  const priceTraceLine = {
+    sortValue: parseTimeValue(meta.syncTimestamp ?? current.timestamp) ?? Number.NEGATIVE_INFINITY,
+    time: formatSignalTimestamp(meta.syncTimestamp ?? current.timestamp, '—'),
+    text: `CPO ${current.price >= last4Avg ? 'above' : 'below'} 4-week mean; procurement bias ${current.price >= last4Avg ? 'favorable' : 'cautious'}.`,
+  };
+  const modelTraceLines = [...districtTraceLines, priceTraceLine].sort((a, b) => a.sortValue - b.sortValue);
   const weeklyActionStatement = buildWeeklyActionStatement(
     healthyDistricts.map((district) => district.name),
     monitorDistricts.map((district) => district.name),
@@ -321,7 +335,7 @@ export default function OverviewPage() {
                 </div>
                 <div className="terminal-feed">
                   {modelTraceLines.map((line) => (
-                    <p key={`${line.time}-${line.text}`}><span>{line.time}</span> {line.text}</p>
+                    <p key={`${line.sortValue}-${line.text}`}><span>{line.time}</span> {line.text}</p>
                   ))}
                 </div>
               </div>

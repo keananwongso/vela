@@ -6,7 +6,7 @@ import { DashboardDataProvider } from '@/components/dashboard-data-provider';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const tab = pathname.split('/')[1] as 'overview' | 'districts' | 'prices' | 'settings';
+  const tab = pathname.split('/')[1] as 'overview' | 'prices' | 'settings';
 
   return (
     <div className="app">

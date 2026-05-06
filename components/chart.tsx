@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { CpoPoint } from '@/lib/dashboard-types';
 
 const W = 920;
@@ -15,12 +16,26 @@ function fmt(n: number) {
   return n.toLocaleString('en-US');
 }
 
+function niceStep(roughStep: number) {
+  const exponent = 10 ** Math.floor(Math.log10(roughStep));
+  const fraction = roughStep / exponent;
+
+  if (fraction <= 1) return exponent;
+  if (fraction <= 2) return 2 * exponent;
+  if (fraction <= 5) return 5 * exponent;
+  return 10 * exponent;
+}
+
 function buildChart(series: CpoPoint[]) {
   const prices = series.map((p) => p.price);
   const minP = Math.min(...prices);
   const maxP = Math.max(...prices);
-  const yMin = Math.floor((minP - 80) / 100) * 100;
-  const yMax = Math.ceil((maxP + 80) / 100) * 100;
+  const span = Math.max(maxP - minP, maxP * 0.05, 400);
+  const yPadding = Math.max(span * 0.12, 120);
+  const roughStep = (span + yPadding * 2) / 5;
+  const step = niceStep(roughStep);
+  const yMin = Math.floor((minP - yPadding) / step) * step;
+  const yMax = Math.ceil((maxP + yPadding) / step) * step;
 
   const xFn = (i: number) => PAD_L + (INNER_W * i) / Math.max(series.length - 1, 1);
   const yFn = (v: number) => PAD_T + INNER_H * (1 - (v - yMin) / (yMax - yMin));
@@ -40,7 +55,7 @@ function buildChart(series: CpoPoint[]) {
   const intercept = meanY - slope * meanX;
 
   const ticks: number[] = [];
-  for (let v = yMin; v <= yMax; v += 100) ticks.push(v);
+  for (let v = yMin; v <= yMax; v += step) ticks.push(v);
 
   const last4Avg = prices.slice(-4).reduce((a, b) => a + b, 0) / 4;
   const current = series[series.length - 1];
@@ -53,10 +68,18 @@ function buildChart(series: CpoPoint[]) {
 }
 
 export default function PriceChart({ series }: { series: CpoPoint[] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { xFn, yFn, linePath, areaPath, ticks, last4Avg, current, wowDelta, wowPct, favorable, slope, intercept, n } = buildChart(series);
+  const activeIndex = hoveredIndex ?? (series.length - 1);
+  const activePoint = series[activeIndex];
+  const activeX = xFn(activeIndex);
+  const activeY = yFn(activePoint.price);
+  const tooltipWidth = 92;
+  const tooltipX = Math.min(Math.max(activeX - tooltipWidth / 2, PAD_L), W - PAD_R - tooltipWidth);
+  const tooltipY = Math.max(activeY - 36, PAD_T + 4);
 
   return (
-    <div className="chart-wrap">
+    <div className="chart-wrap" onMouseLeave={() => setHoveredIndex(null)}>
       <div className="chart-head">
         <div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -99,7 +122,7 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
         </div>
       </div>
 
-      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--healthy)" stopOpacity="0.07" />
@@ -134,48 +157,52 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
           stroke="var(--muted)" strokeWidth="1.25" strokeDasharray="4 4"
         />
 
+        <line
+          x1={activeX} y1={PAD_T}
+          x2={activeX} y2={PAD_T + INNER_H}
+          stroke="var(--healthy)" strokeOpacity="0.25" strokeDasharray="2 3"
+        />
+
         {series.map((p, i) => (
           <g key={p.week}>
             <circle
               cx={xFn(i)} cy={yFn(p.price)}
-              r={p.current ? 5 : 3}
+              r={i === activeIndex ? 5 : 3}
               fill="var(--surface)" stroke="var(--healthy)"
-              strokeWidth={p.current ? 2.5 : 1.5}
+              strokeWidth={i === activeIndex ? 2.5 : 1.5}
             />
-            {p.current && (
-              <>
-                <line
-                  x1={xFn(i)} y1={PAD_T}
-                  x2={xFn(i)} y2={PAD_T + INNER_H}
-                  stroke="var(--healthy)" strokeOpacity="0.25" strokeDasharray="2 3"
-                />
-                <g transform={`translate(${xFn(i)},${yFn(p.price) - 14})`}>
-                  <rect x="-32" y="-18" width="64" height="20" rx="4" fill="var(--ink)" />
-                  <text textAnchor="middle" y="-4" fontSize="11" fill="var(--surface)" fontFamily="var(--font-mono)" fontWeight="500">
-                    {fmt(p.price)}
-                  </text>
-                </g>
-              </>
-            )}
+            <circle
+              cx={xFn(i)} cy={yFn(p.price)}
+              r={12}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIndex(i)}
+            />
           </g>
         ))}
+
+        <g transform={`translate(${tooltipX},${tooltipY})`} pointerEvents="none">
+          <rect x="0" y="-18" width={tooltipWidth} height="24" rx="6" fill="var(--ink)" />
+          <text x={tooltipWidth / 2} y="-2" textAnchor="middle" fontSize="11" fill="var(--surface)" fontFamily="var(--font-mono)" fontWeight="500">
+            {fmt(activePoint.price)}
+          </text>
+        </g>
 
         {series.map((p, i) => (
           <text
             key={`x-${p.week}`}
             x={xFn(i)} y={H - 10}
             textAnchor="middle" fontSize="11"
-            fill={p.current ? 'var(--ink)' : 'var(--muted)'}
-            fontWeight={p.current ? 600 : 400}
+            fill={i === activeIndex ? 'var(--ink)' : 'var(--muted)'}
+            fontWeight={i === activeIndex ? 600 : 400}
           >
             {p.week}
           </text>
         ))}
 
-        <g transform={`translate(${xFn(n - 1)},${H - 26})`}>
+        <g transform={`translate(${activeX},${H - 26})`}>
           <rect x="-20" y="0" width="40" height="14" rx="3" fill="var(--healthy)" />
           <text textAnchor="middle" y="10" fontSize="10" fill="var(--surface)" fontWeight="600" letterSpacing="0.06em">
-            NOW
+            {hoveredIndex === null ? 'NOW' : activePoint.week}
           </text>
         </g>
       </svg>
