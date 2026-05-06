@@ -30,7 +30,7 @@ class IngestPayload(BaseModel):
     rain_probability: float
     heavy_rain_day: str
     cpo_price: str
-    cpo_price_raw: int
+    cpo_price_raw: float
     tbs_price: str
     period: str
     price_trend: str
