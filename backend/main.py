@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 
-from backend.config import CORS_ALLOW_ORIGINS
 from backend.db import close_mongo_connection, connect_to_mongo, ensure_indexes, get_collection
 from backend.sample_data import REGION_ORDER
 from backend.schemas import ErrorResponse, IngestPayload, IngestSuccessResponse
@@ -36,7 +35,7 @@ ingest_router = APIRouter(prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -102,6 +101,11 @@ async def pymongo_exception_handler(_: Request, exc: PyMongoError) -> JSONRespon
         status_code=500,
         content={"status": "error", "detail": f"MongoDB query failed: {exc}"},
     )
+
+
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
 
 
 @app.get("/regions", responses=ERROR_RESPONSES)
