@@ -6,10 +6,10 @@ import DashboardShell from '@/components/dashboard-shell';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <DashboardShell>
-      <Suspense fallback={<DashboardLoadingState />}>
+    <Suspense fallback={<DashboardLoadingState />}>
+      <DashboardShell>
         <DashboardDataBoundary>{children}</DashboardDataBoundary>
-      </Suspense>
-    </DashboardShell>
+      </DashboardShell>
+    </Suspense>
   );
 }
