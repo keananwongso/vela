@@ -83,6 +83,20 @@ async def list_region_documents() -> list[dict]:
     return documents
 
 
+async def latest_documents_by_region(collection_name: str, sort_field: str) -> dict[str, dict]:
+    documents = await get_collection(collection_name).aggregate(
+        [
+            {"$sort": {"region_id": 1, sort_field: -1}},
+            {"$group": {"_id": "$region_id", "document": {"$first": "$$ROOT"}}},
+        ]
+    ).to_list(length=None)
+
+    return {
+        entry["_id"]: {key: value for key, value in entry["document"].items() if key != "_id"}
+        for entry in documents
+    }
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
     detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
@@ -115,6 +129,8 @@ async def get_regions() -> dict:
     latest_cpo = await latest_document("price_data", {"province": "Riau", "commodity": "cpo"}, "timestamp")
     latest_recommendation = await latest_document("recommendations", {}, "generated_at")
     region_documents = await list_region_documents()
+    latest_recommendations_by_region = await latest_documents_by_region("recommendations", "generated_at")
+    latest_ndvi_by_region = await latest_documents_by_region("ndvi_readings", "timestamp")
     region_ids = [region["id"] for region in region_documents]
     fresh_region_ids: list[str] = []
 
@@ -130,18 +146,15 @@ async def get_regions() -> dict:
     )
     stale_region_ids = [region_id for region_id in region_ids if region_id not in fresh_region_ids]
     regions = []
-    last_sync = None
+    last_sync_candidates = [latest_cpo["timestamp"]] if latest_cpo and latest_cpo.get("timestamp") else []
 
     for region in region_documents:
-        recommendation = await latest_document("recommendations", {"region_id": region["id"]}, "generated_at")
-        ndvi = await latest_document("ndvi_readings", {"region_id": region["id"]}, "timestamp")
+        recommendation = latest_recommendations_by_region.get(region["id"])
+        ndvi = latest_ndvi_by_region.get(region["id"])
         updated_at = recommendation["generated_at"] if recommendation else ndvi["timestamp"] if ndvi else None
 
-        if updated_at and (last_sync is None or updated_at > last_sync):
-            last_sync = updated_at
-
-        if latest_cpo and latest_cpo["timestamp"] and (last_sync is None or latest_cpo["timestamp"] > last_sync):
-            last_sync = latest_cpo["timestamp"]
+        if updated_at:
+            last_sync_candidates.append(updated_at)
 
         regions.append(
             {
@@ -155,6 +168,8 @@ async def get_regions() -> dict:
                 "updatedAt": updated_at,
             }
         )
+
+    last_sync = max(last_sync_candidates) if last_sync_candidates else None
 
     return {
         "regions": regions,

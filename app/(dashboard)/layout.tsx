@@ -1,19 +1,15 @@
-'use client';
+import { Suspense } from 'react';
+import type { ReactNode } from 'react';
+import DashboardDataBoundary from '@/components/dashboard-data-boundary';
+import DashboardLoadingState from '@/components/dashboard-loading-state';
+import DashboardShell from '@/components/dashboard-shell';
 
-import { usePathname } from 'next/navigation';
-import Sidebar from '@/components/sidebar';
-import { DashboardDataProvider } from '@/components/dashboard-data-provider';
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const tab = pathname.split('/')[1] as 'overview' | 'prices' | 'settings';
-
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="app">
-      <Sidebar active={tab} />
-      <main className="main">
-        <DashboardDataProvider>{children}</DashboardDataProvider>
-      </main>
-    </div>
+    <DashboardShell>
+      <Suspense fallback={<DashboardLoadingState />}>
+        <DashboardDataBoundary>{children}</DashboardDataBoundary>
+      </Suspense>
+    </DashboardShell>
   );
 }

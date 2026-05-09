@@ -12,19 +12,31 @@ type DashboardDataContextValue = DashboardSnapshot & {
 
 const DashboardDataContext = createContext<DashboardDataContextValue | null>(null);
 
-export function DashboardDataProvider({ children }: { children: ReactNode }) {
-  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(true);
+export function DashboardDataProvider({
+  children,
+  initialSnapshot = null,
+}: {
+  children: ReactNode;
+  initialSnapshot?: DashboardSnapshot | null;
+}) {
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(initialSnapshot);
+  const [isRefreshing, setIsRefreshing] = useState(initialSnapshot === null);
 
   useEffect(() => {
     let active = true;
+
+    if (active) {
+      setIsRefreshing(true);
+    }
 
     fetchDashboardSnapshot()
       .then((nextSnapshot) => {
         if (active) setSnapshot(nextSnapshot);
       })
       .catch(() => {
-        if (active) setSnapshot(getFallbackDashboardSnapshot());
+        if (active && !initialSnapshot) {
+          setSnapshot(getFallbackDashboardSnapshot());
+        }
       })
       .finally(() => {
         if (active) setIsRefreshing(false);
@@ -33,7 +45,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialSnapshot]);
 
   if (snapshot === null && isRefreshing) {
     return <DashboardLoadingState />;
