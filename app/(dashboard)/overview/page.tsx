@@ -59,6 +59,18 @@ function formatSignalDateLabel(value: string | undefined, fallback: string) {
   });
 }
 
+function formatFullSignalDateLabel(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  });
+}
+
 function parseTimeValue(value: string | null | undefined) {
   if (!value) return null;
   const timestamp = new Date(value).getTime();
@@ -139,7 +151,7 @@ export default function OverviewPage() {
   const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
   const filterTrayRef = useRef<HTMLDivElement>(null);
   const dispatchPlanRef = useRef<HTMLElement>(null);
-  const { districts, prices, source, meta } = useDashboardData();
+  const { districts, prices, source, meta, freshness } = useDashboardData();
   const priceSeriesMeta = getPriceSeriesMeta(prices.series);
 
   useEffect(() => {
@@ -299,6 +311,9 @@ export default function OverviewPage() {
   const priceComparisonLabel = buildComparisonLabel(current.price, referenceAvg, priceSeriesMeta.averageLabelShort);
   const activeFilterLabel = FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label ?? 'All';
   const lastSyncLabel = formatSignalDateLabel(meta.syncTimestamp ?? current.timestamp, meta.dayLabel);
+  const partialFreshnessMessage = freshness.isPartial
+    ? `CPO price is current as of ${formatFullSignalDateLabel(prices.lastUpdated, meta.dayLabel)}, but district signals are only partially updated (${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh).`
+    : null;
 
   function applyStatusFilter(nextFilter: StatusFilter) {
     setStatusFilter(nextFilter);
@@ -437,6 +452,13 @@ export default function OverviewPage() {
           </div>
         </div>
       </div>
+
+      {partialFreshnessMessage ? (
+        <div className="sync-alert" role="status">
+          <strong>Partial district sync</strong>
+          <span>{partialFreshnessMessage}</span>
+        </div>
+      ) : null}
 
       {viewMode === 'simple' ? (
         <>

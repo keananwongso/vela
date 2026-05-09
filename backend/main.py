@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from datetime import datetime
+import logging
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -20,6 +21,7 @@ ERROR_RESPONSES = {
     500: {"model": ErrorResponse},
 }
 PROJECTION_NO_ID = {"_id": 0}
+logger = logging.getLogger("vela.ingest")
 
 
 @asynccontextmanager
@@ -111,16 +113,35 @@ async def health() -> dict:
 @app.get("/regions", responses=ERROR_RESPONSES)
 async def get_regions() -> dict:
     latest_cpo = await latest_document("price_data", {"province": "Riau", "commodity": "cpo"}, "timestamp")
+    latest_recommendation = await latest_document("recommendations", {}, "generated_at")
+    region_documents = await list_region_documents()
+    region_ids = [region["id"] for region in region_documents]
+    fresh_region_ids: list[str] = []
+
+    if latest_recommendation and latest_recommendation.get("run_id"):
+        fresh_region_ids = await get_collection("recommendations").distinct(
+            "region_id",
+            {"run_id": latest_recommendation["run_id"]},
+        )
+
+    fresh_region_ids = sorted(
+        {region_id for region_id in fresh_region_ids if region_id in region_ids},
+        key=lambda region_id: region_ids.index(region_id),
+    )
+    stale_region_ids = [region_id for region_id in region_ids if region_id not in fresh_region_ids]
     regions = []
     last_sync = None
 
-    for region in await list_region_documents():
+    for region in region_documents:
         recommendation = await latest_document("recommendations", {"region_id": region["id"]}, "generated_at")
         ndvi = await latest_document("ndvi_readings", {"region_id": region["id"]}, "timestamp")
         updated_at = recommendation["generated_at"] if recommendation else ndvi["timestamp"] if ndvi else None
 
         if updated_at and (last_sync is None or updated_at > last_sync):
             last_sync = updated_at
+
+        if latest_cpo and latest_cpo["timestamp"] and (last_sync is None or latest_cpo["timestamp"] > last_sync):
+            last_sync = latest_cpo["timestamp"]
 
         regions.append(
             {
@@ -141,6 +162,14 @@ async def get_regions() -> dict:
             "province": "Riau",
             "districtCount": len(regions),
             "lastSync": last_sync,
+            "latestRunId": latest_recommendation["run_id"] if latest_recommendation else None,
+            "priceSyncTimestamp": latest_cpo["timestamp"] if latest_cpo else None,
+            "signalSyncTimestamp": latest_recommendation["generated_at"] if latest_recommendation else None,
+            "expectedRegionCount": len(region_ids),
+            "freshRegionCount": len(fresh_region_ids),
+            "freshRegionIds": fresh_region_ids,
+            "staleRegionIds": stale_region_ids,
+            "isPartial": bool(region_ids) and 0 < len(fresh_region_ids) < len(region_ids),
         },
     }
 
@@ -260,6 +289,14 @@ async def get_cpo_prices() -> dict:
 @ingest_router.post("/ingest", response_model=IngestSuccessResponse, responses=ERROR_RESPONSES)
 async def ingest(payload: IngestPayload) -> IngestSuccessResponse:
     generated_at = payload.generated_at_iso
+    logger.info(
+        "ingest.request %s",
+        {
+            "run_id": payload.run_id,
+            "region_id": payload.region_id,
+            "generated_at": generated_at,
+        },
+    )
 
     recommendation_document = {
         "region_id": payload.region_id,
@@ -300,28 +337,67 @@ async def ingest(payload: IngestPayload) -> IngestSuccessResponse:
     }
 
     try:
-        await get_collection("recommendations").update_one(
+        recommendation_result = await get_collection("recommendations").update_one(
             {"region_id": payload.region_id, "run_id": payload.run_id},
             {"$set": recommendation_document},
             upsert=True,
         )
-        await get_collection("ndvi_readings").update_one(
+        ndvi_result = await get_collection("ndvi_readings").update_one(
             {"region_id": payload.region_id, "run_id": payload.run_id},
             {"$set": ndvi_document},
             upsert=True,
         )
-        await get_collection("weather_forecasts").update_one(
+        weather_result = await get_collection("weather_forecasts").update_one(
             {"region_id": payload.region_id, "run_id": payload.run_id},
             {"$set": weather_document},
             upsert=True,
         )
-        await get_collection("price_data").update_one(
+        price_result = await get_collection("price_data").update_one(
             {"province": "Riau", "commodity": "cpo", "run_id": payload.run_id},
             {"$set": price_document},
             upsert=True,
         )
     except PyMongoError as exc:
+        logger.exception(
+            "ingest.write_failed %s",
+            {
+                "run_id": payload.run_id,
+                "region_id": payload.region_id,
+                "generated_at": generated_at,
+            },
+        )
         raise HTTPException(status_code=500, detail=f"MongoDB write failed: {exc}") from exc
+
+    logger.info(
+        "ingest.write_result %s",
+        {
+            "run_id": payload.run_id,
+            "region_id": payload.region_id,
+            "generated_at": generated_at,
+            "collections": {
+                "recommendations": {
+                    "matched": recommendation_result.matched_count,
+                    "modified": recommendation_result.modified_count,
+                    "upserted": bool(recommendation_result.upserted_id),
+                },
+                "ndvi_readings": {
+                    "matched": ndvi_result.matched_count,
+                    "modified": ndvi_result.modified_count,
+                    "upserted": bool(ndvi_result.upserted_id),
+                },
+                "weather_forecasts": {
+                    "matched": weather_result.matched_count,
+                    "modified": weather_result.modified_count,
+                    "upserted": bool(weather_result.upserted_id),
+                },
+                "price_data": {
+                    "matched": price_result.matched_count,
+                    "modified": price_result.modified_count,
+                    "upserted": bool(price_result.upserted_id),
+                },
+            },
+        },
+    )
 
     return IngestSuccessResponse(status="ok", run_id=payload.run_id)
 

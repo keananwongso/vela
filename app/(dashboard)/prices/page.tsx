@@ -31,7 +31,7 @@ function formatUpdatedAt(value: string) {
 
 export default function PricesPage() {
   const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8w');
-  const { prices } = useDashboardData();
+  const { prices, freshness } = useDashboardData();
   const series = prices.series;
   const priceSeriesMeta = getPriceSeriesMeta(series);
 
@@ -42,6 +42,9 @@ export default function PricesPage() {
   const weeksToShow = WEEKS_BY_TAB[chartTab];
   const visibleSeries = series.slice(-Math.min(weeksToShow, series.length));
   const showingAllAvailable = weeksToShow > series.length;
+  const partialFreshnessMessage = freshness.isPartial
+    ? `CPO price is current as of ${formatUpdatedAt(prices.lastUpdated)}, but district signals are only partially updated (${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh).`
+    : null;
 
   return (
     <>
@@ -55,6 +58,13 @@ export default function PricesPage() {
           <button className="btn">Export CSV</button>
         </div>
       </div>
+
+      {partialFreshnessMessage ? (
+        <div className="sync-alert" role="status">
+          <strong>Partial district sync</strong>
+          <span>{partialFreshnessMessage}</span>
+        </div>
+      ) : null}
 
       <div className="kpi-row">
         <div className="kpi">

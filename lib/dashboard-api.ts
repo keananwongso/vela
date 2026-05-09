@@ -1,5 +1,5 @@
 import { CPO_RECENT_BACKFILL_SERIES, DISTRICTS } from '@/lib/data';
-import type { DashboardSnapshot, District, DistrictDetail, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
+import type { DashboardFreshness, DashboardSnapshot, District, DistrictDetail, OverviewMeta, PriceSnapshot, StatusKey } from '@/lib/dashboard-types';
 
 type ApiRegionSummary = {
   id: string;
@@ -18,6 +18,14 @@ type ApiRegionsResponse = {
     province?: string;
     districtCount?: number;
     lastSync?: string | null;
+    latestRunId?: string | null;
+    priceSyncTimestamp?: string | null;
+    signalSyncTimestamp?: string | null;
+    expectedRegionCount?: number;
+    freshRegionCount?: number;
+    freshRegionIds?: string[];
+    staleRegionIds?: string[];
+    isPartial?: boolean;
   };
 };
 
@@ -154,12 +162,26 @@ function getFallbackPrices(): PriceSnapshot {
   };
 }
 
+function getFallbackFreshness(): DashboardFreshness {
+  return {
+    latestRunId: null,
+    priceSyncTimestamp: '2026-05-06T07:00:00Z',
+    signalSyncTimestamp: '2026-05-06T07:00:00Z',
+    expectedRegionCount: DISTRICTS.length,
+    freshRegionCount: DISTRICTS.length,
+    freshRegionIds: DISTRICTS.map((district) => district.id),
+    staleRegionIds: [],
+    isPartial: false,
+  };
+}
+
 function getFallbackSnapshot(): DashboardSnapshot {
   const meta = getOverviewMeta('2026-05-06T07:00:00Z');
   return {
     districts: DISTRICTS,
     prices: getFallbackPrices(),
     meta,
+    freshness: getFallbackFreshness(),
     source: 'mock',
   };
 }
@@ -268,25 +290,75 @@ function buildRegionLatestDetail(apiDetail: ApiRegionLatestResponse, fallbackDis
   };
 }
 
-function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
-  if (!apiPrices || !apiPrices.series.length) return getFallbackPrices();
+function normalizeLivePricePoints(points: ApiPricePoint[]) {
+  return points
+    .map((point) => {
+      const date = parseTimestamp(point.timestamp);
+      if (!date || typeof point.price !== 'number' || Number.isNaN(point.price)) return null;
 
-  const recentSeries = getRecentSeriesWindow(apiPrices.series);
-  const activeSeries = recentSeries.length >= 6
-    ? recentSeries
-    : CPO_RECENT_BACKFILL_SERIES.map((point) => ({
-        timestamp: point.timestamp ?? '2026-05-06T07:00:00Z',
+      return {
+        timestamp: point.timestamp,
         week: point.week,
         price: point.price,
-      }));
-  const latestPoint = activeSeries[activeSeries.length - 1];
+        date,
+      };
+    })
+    .filter((point): point is ApiPricePoint & { date: Date } => point !== null)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+function buildMergedRecentPriceSeries(livePoints: ApiPricePoint[]) {
+  const recentLiveSeries = normalizeLivePricePoints(getRecentSeriesWindow(livePoints));
+  if (!recentLiveSeries.length) return [];
+
+  if (recentLiveSeries.length >= CPO_RECENT_BACKFILL_SERIES.length) {
+    return recentLiveSeries.map(({ date: _date, ...point }) => point);
+  }
+
+  const mergedByTimestamp = new Map(
+    CPO_RECENT_BACKFILL_SERIES
+      .filter((point) => point.timestamp)
+      .map((point) => [
+        point.timestamp as string,
+        {
+          timestamp: point.timestamp as string,
+          week: point.week,
+          price: point.price,
+        },
+      ]),
+  );
+
+  for (const point of recentLiveSeries) {
+    mergedByTimestamp.set(point.timestamp, {
+      timestamp: point.timestamp,
+      week: point.week,
+      price: point.price,
+    });
+  }
+
+  return [...mergedByTimestamp.values()].sort((a, b) => {
+    const aTime = parseTimestamp(a.timestamp)?.getTime() ?? Number.NEGATIVE_INFINITY;
+    const bTime = parseTimestamp(b.timestamp)?.getTime() ?? Number.NEGATIVE_INFINITY;
+    return aTime - bTime;
+  });
+}
+
+function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
+  if (!apiPrices || !apiPrices.series.length) return getFallbackPrices();
+  const normalizedLiveSeries = normalizeLivePricePoints(apiPrices.series);
+  if (!normalizedLiveSeries.length) return getFallbackPrices();
+
+  const activeSeries = buildMergedRecentPriceSeries(apiPrices.series);
+  if (!activeSeries.length) return getFallbackPrices();
+
+  const latestLivePoint = normalizedLiveSeries[normalizedLiveSeries.length - 1];
 
   return {
     commodity: apiPrices.commodity,
     province: apiPrices.province,
     unit: apiPrices.unit,
-    currentPrice: latestPoint.price,
-    lastUpdated: latestPoint.timestamp,
+    currentPrice: latestLivePoint.price,
+    lastUpdated: apiPrices.lastUpdated ?? latestLivePoint.timestamp,
     series: activeSeries.map((point, index, points) => ({
       week: parseTimestamp(point.timestamp) ? formatDayLabel(parseTimestamp(point.timestamp) as Date) : point.week,
       price: point.price,
@@ -294,6 +366,23 @@ function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
       current: index === points.length - 1,
     })),
     ffbReference: apiPrices.ffbReference ?? 2480,
+  };
+}
+
+function buildFreshness(
+  summary: ApiRegionsResponse['summary'] | undefined,
+  fallback: DashboardFreshness,
+  priceSyncTimestamp: string | null,
+): DashboardFreshness {
+  return {
+    latestRunId: summary?.latestRunId ?? fallback.latestRunId,
+    priceSyncTimestamp: summary?.priceSyncTimestamp ?? priceSyncTimestamp ?? fallback.priceSyncTimestamp,
+    signalSyncTimestamp: summary?.signalSyncTimestamp ?? fallback.signalSyncTimestamp,
+    expectedRegionCount: summary?.expectedRegionCount ?? summary?.districtCount ?? fallback.expectedRegionCount,
+    freshRegionCount: summary?.freshRegionCount ?? fallback.freshRegionCount,
+    freshRegionIds: summary?.freshRegionIds ?? fallback.freshRegionIds,
+    staleRegionIds: summary?.staleRegionIds ?? fallback.staleRegionIds,
+    isPartial: summary?.isPartial ?? fallback.isPartial,
   };
 }
 
@@ -356,8 +445,9 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
 
   const prices = buildPriceSnapshot(apiPrices);
   const districts = buildDistricts(apiRegions, prices);
+  const regionsSummary = regionsResult.status === 'fulfilled' ? regionsResult.value.summary : undefined;
   const syncTimestamp =
-    (regionsResult.status === 'fulfilled' ? regionsResult.value.summary?.lastSync : undefined)
+    regionsSummary?.lastSync
       ?? apiPrices?.lastUpdated
       ?? null;
 
@@ -365,6 +455,7 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
     districts,
     prices,
     meta: getOverviewMeta(syncTimestamp),
+    freshness: buildFreshness(regionsSummary, fallback.freshness, apiPrices?.lastUpdated ?? null),
     source: apiRegions && apiPrices ? 'api' : 'mixed',
   };
 }

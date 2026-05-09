@@ -26,6 +26,17 @@ export interface OverviewMeta {
   dayLabel: string;
 }
 
+export interface DashboardFreshness {
+  latestRunId: string | null;
+  priceSyncTimestamp: string | null;
+  signalSyncTimestamp: string | null;
+  expectedRegionCount: number;
+  freshRegionCount: number;
+  freshRegionIds: string[];
+  staleRegionIds: string[];
+  isPartial: boolean;
+}
+
 export interface CpoPoint {
   week: string;
   price: number;
@@ -47,6 +58,7 @@ export interface DashboardSnapshot {
   districts: District[];
   prices: PriceSnapshot;
   meta: OverviewMeta;
+  freshness: DashboardFreshness;
   source: 'api' | 'mock' | 'mixed';
 }
 
