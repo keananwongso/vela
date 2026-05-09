@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { fetchDashboardSnapshot, getFallbackDashboardSnapshot } from '@/lib/dashboard-api';
 import type { DashboardSnapshot } from '@/lib/dashboard-types';
+import DashboardLoadingState from '@/components/dashboard-loading-state';
 
 type DashboardDataContextValue = DashboardSnapshot & {
   isRefreshing: boolean;
@@ -12,7 +13,7 @@ type DashboardDataContextValue = DashboardSnapshot & {
 const DashboardDataContext = createContext<DashboardDataContextValue | null>(null);
 
 export function DashboardDataProvider({ children }: { children: ReactNode }) {
-  const [snapshot, setSnapshot] = useState<DashboardSnapshot>(() => getFallbackDashboardSnapshot());
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(true);
 
   useEffect(() => {
@@ -34,8 +35,14 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  if (snapshot === null && isRefreshing) {
+    return <DashboardLoadingState />;
+  }
+
+  const resolvedSnapshot = snapshot ?? getFallbackDashboardSnapshot();
+
   return (
-    <DashboardDataContext.Provider value={{ ...snapshot, isRefreshing }}>
+    <DashboardDataContext.Provider value={{ ...resolvedSnapshot, isRefreshing }}>
       {children}
     </DashboardDataContext.Provider>
   );
