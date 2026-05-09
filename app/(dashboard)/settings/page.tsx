@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <div className="settings-row">
           <div className="settings-label">Sync cadence</div>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 500 }}>Weekly · every Monday 06:00 WIB</div>
+            <div style={{ fontSize: 13.5, fontWeight: 500 }}>Daily · every day 18:00 WIB</div>
             <div className="settings-help">Satellite NDVI + weather + spot price feeds</div>
           </div>
         </div>
