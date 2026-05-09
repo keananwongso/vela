@@ -38,11 +38,11 @@ export default function SettingsPage() {
       </div>
 
       <section className="section">
-        <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, lineHeight: 1.05 }}>
+        <div className="settings-section-head">
+          <h2 className="settings-section-title">
             Procurement preferences
           </h2>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+          <div className="settings-section-meta">
             Applies to all dispatch recommendations for PT Sawit Riau
           </div>
         </div>
@@ -84,18 +84,18 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div style={{ padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="settings-actions">
           <button className="btn">Cancel</button>
           <button className="btn primary">Save changes</button>
         </div>
       </section>
 
       <section className="section">
-        <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, lineHeight: 1.05 }}>
+        <div className="settings-section-head">
+          <h2 className="settings-section-title">
             Team
           </h2>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+          <div className="settings-section-meta">
             Members with access to this workspace
           </div>
         </div>
@@ -106,25 +106,14 @@ export default function SettingsPage() {
         ].map((m, i) => (
           <div
             key={i}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 28px',
-              borderBottom: '1px solid var(--border)',
-            }}
+            className="team-member-row"
           >
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'color-mix(in srgb, var(--brand) 12%, var(--surface))', color: 'var(--brand)',
-              display: 'grid', placeItems: 'center',
-              fontSize: 12, fontWeight: 600,
-            }}>
+            <div className="team-member-avatar">
               {m.initials}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.role}</div>
+            <div className="team-member-meta">
+              <div className="team-member-name">{m.name}</div>
+              <div className="team-member-role">{m.role}</div>
             </div>
             <span className="badge muted">{m.access}</span>
             <button className="btn">Manage</button>

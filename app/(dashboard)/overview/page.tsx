@@ -609,32 +609,34 @@ export default function OverviewPage() {
                   <span>RECOMMENDATION MATRIX</span>
                   <strong>Ranked by dispatch confidence</strong>
                 </div>
-                <table className="terminal-table">
-                  <thead>
-                    <tr>
-                      <th>District</th>
-                      <th>Signal</th>
-                      <th>NDVI</th>
-                      <th>Confidence</th>
-                      <th>Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleDistricts.length ? visibleDistricts.map((district) => (
-                      <tr key={district.id} onClick={() => setSelected(district.id)}>
-                        <td>{district.name}</td>
-                        <td><span className={`terminal-signal ${district.status}`}>{STATUS_COPY[district.status].terminalLabel}</span></td>
-                        <td className="mono">{district.ndvi?.toFixed(2) ?? '—'}</td>
-                        <td className="mono">{district.confidence}%</td>
-                        <td className="mono">{district.updatedAt ? meta.dayLabel : '—'}</td>
-                      </tr>
-                    )) : (
+                <div className="table-scroll terminal-table-wrap">
+                  <table className="terminal-table">
+                    <thead>
                       <tr>
-                        <td colSpan={5} className="mono">No districts match the current filter.</td>
+                        <th>District</th>
+                        <th>Signal</th>
+                        <th>NDVI</th>
+                        <th>Confidence</th>
+                        <th>Updated</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {visibleDistricts.length ? visibleDistricts.map((district) => (
+                        <tr key={district.id} onClick={() => setSelected(district.id)}>
+                          <td>{district.name}</td>
+                          <td><span className={`terminal-signal ${district.status}`}>{STATUS_COPY[district.status].terminalLabel}</span></td>
+                          <td className="mono">{district.ndvi?.toFixed(2) ?? '—'}</td>
+                          <td className="mono">{district.confidence}%</td>
+                          <td className="mono">{district.updatedAt ? meta.dayLabel : '—'}</td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={5} className="mono">No districts match the current filter.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="terminal-panel terminal-price-panel">

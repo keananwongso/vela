@@ -170,43 +170,45 @@ export default function PricesPage() {
             <div className="meta">CPO spot · IDR/kg</div>
           </div>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{priceSeriesMeta.periodLabel}</th>
-              <th>Price (IDR/kg)</th>
-              <th>WoW change</th>
-              <th>Signal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {series.map((p, i) => {
-              const prev = i > 0 ? series[i - 1].price : p.price;
-              const delta = p.price - prev;
-              const pct = i > 0 ? (delta / prev) * 100 : 0;
-              const favorable = p.price >= referenceAvg;
-              return (
-                <tr key={p.week} className={p.current ? 'row-selected' : ''}>
-                  <td style={{ fontWeight: p.current ? 600 : 500 }}>
-                    {p.week}
-                    {p.current && (
-                      <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--healthy)' }}>● now</span>
-                    )}
-                  </td>
-                  <td className="mono">{fmt(p.price)}</td>
-                  <td className="mono" style={{ color: delta >= 0 ? 'var(--healthy)' : 'var(--risk)' }}>
-                    {i === 0 ? '—' : `${delta >= 0 ? '▲ +' : '▼ '}${fmt(Math.abs(delta))} (${pct.toFixed(1)}%)`}
-                  </td>
-                  <td>
-                    <span className={`badge ${favorable ? 'green' : 'amber'}`}>
-                      <span className="dot" />{favorable ? 'Favorable' : 'Caution'}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>{priceSeriesMeta.periodLabel}</th>
+                <th>Price (IDR/kg)</th>
+                <th>WoW change</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {series.map((p, i) => {
+                const prev = i > 0 ? series[i - 1].price : p.price;
+                const delta = p.price - prev;
+                const pct = i > 0 ? (delta / prev) * 100 : 0;
+                const favorable = p.price >= referenceAvg;
+                return (
+                  <tr key={p.week} className={p.current ? 'row-selected' : ''}>
+                    <td style={{ fontWeight: p.current ? 600 : 500 }}>
+                      {p.week}
+                      {p.current && (
+                        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--healthy)' }}>● now</span>
+                      )}
+                    </td>
+                    <td className="mono">{fmt(p.price)}</td>
+                    <td className="mono" style={{ color: delta >= 0 ? 'var(--healthy)' : 'var(--risk)' }}>
+                      {i === 0 ? '—' : `${delta >= 0 ? '▲ +' : '▼ '}${fmt(Math.abs(delta))} (${pct.toFixed(1)}%)`}
+                    </td>
+                    <td>
+                      <span className={`badge ${favorable ? 'green' : 'amber'}`}>
+                        <span className="dot" />{favorable ? 'Favorable' : 'Caution'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );
