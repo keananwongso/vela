@@ -2,8 +2,6 @@
 
 Vela, Latin for "sails", is a procurement intelligence system for palm oil mills in Riau, Indonesia. A sail does not create the wind; it turns existing forces into direction. Vela does the same with public data, turning crop-health signals, weather context, and commodity prices into district-level truck dispatch decisions.
 
-**One-line pitch:** turning Indonesia's public data into private procurement decisions.
-
 ## The problem
 
 Palm oil mills need to make one high-stakes decision every week:
@@ -126,19 +124,9 @@ lib/          frontend data shaping, types, map data, mock fallback data
 backend/      FastAPI app, Mongo helpers, schemas, seed scripts
 ```
 
-## Notes
-
-- The dashboard server-renders its initial snapshot, then silently refreshes on the client.
-- If the API is unavailable, the frontend can fall back to local mock data.
-- The hardcoded CPO series is only used as initial historical backfill; live price data is preferred whenever available.
-
 ## Deeper docs
 
 - [INTEGRATION_SPEC.md](./INTEGRATION_SPEC.md): MongoDB, n8n, and FastAPI contract
 - [CLAUDE.md](./CLAUDE.md): broader project context, product framing, and submission notes
 - [render.yaml](./render.yaml): backend Render service definition
 - [vercel.json](./vercel.json): frontend Vercel config
-
-## Data note
-
-The Riau map uses a committed subset of geoBoundaries ADM2 data recorded in `lib/geo/riau-adm2.json`.
