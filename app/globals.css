@@ -349,183 +349,54 @@ body {
   place-items: center;
 }
 
-.dashboard-loading-card {
-  position: relative;
-  width: min(100%, 920px);
-  overflow: hidden;
-  padding: 38px;
-  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--surface));
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, rgba(104,151,119,0.16), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(198,138,14,0.1), transparent 30%),
-    linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(246,243,237,0.98) 52%, rgba(239,245,240,0.94) 100%);
-  box-shadow: 0 22px 60px rgba(15,26,31,0.08), inset 0 1px 0 rgba(255,255,255,0.55);
-}
-
-.dashboard-loading-orb {
-  position: absolute;
-  top: -72px;
-  right: -72px;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.12) 45%, transparent 68%),
-    radial-gradient(circle, rgba(26,92,58,0.16), rgba(26,92,58,0.05) 52%, transparent 72%);
-  filter: blur(2px);
-  animation: dashboard-loading-float 4.8s ease-in-out infinite;
-}
-
-.dashboard-loading-head,
-.dashboard-loading-copy,
-.dashboard-loading-meter,
-.dashboard-loading-steps,
-.dashboard-loading-note {
-  position: relative;
-  z-index: 1;
-}
-
-.dashboard-loading-kicker {
-  display: inline-flex;
-  margin-bottom: 18px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.dashboard-loading-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.dashboard-loading-logo {
-  border-radius: 10px;
-  box-shadow: 0 12px 24px rgba(26,92,58,0.14);
-}
-
-.dashboard-loading-wordmark {
-  color: var(--ink);
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.dashboard-loading-version {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 12.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.dashboard-loading-copy {
-  margin-top: 34px;
-  max-width: 620px;
-}
-
-.dashboard-loading-copy h1 {
-  margin: 0;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: clamp(36px, 4vw, 56px);
-  font-weight: 400;
-  line-height: 0.98;
-  letter-spacing: -0.02em;
-}
-
-.dashboard-loading-copy p {
-  margin: 18px 0 0;
-  color: color-mix(in srgb, var(--ink) 74%, var(--surface));
-  font-size: 16px;
-  line-height: 1.7;
-}
-
-.dashboard-loading-meter {
+.dashboard-loading-mark-wrap {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 32px;
+  place-items: center;
+  gap: 18px;
 }
 
-.dashboard-loading-meter-bar {
-  position: relative;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 56%, var(--border));
+.dashboard-loading-mark {
+  width: min(48vw, 230px);
+  height: auto;
+  overflow: visible;
 }
 
-.dashboard-loading-meter-bar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(26,92,58,0.14), rgba(26,92,58,0.68), rgba(198,138,14,0.3));
-  transform-origin: left center;
-  animation: dashboard-loading-meter 1.8s ease-in-out infinite;
+.dashboard-loading-ring-text {
+  fill: var(--ink);
+  font-size: 10px;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
 }
 
-.dashboard-loading-meter-bar-2::after {
-  animation-delay: 0.18s;
+.dashboard-loading-center-mark {
+  transform-origin: 120px 120px;
+  animation: dashboard-loading-spin 16s linear infinite;
 }
 
-.dashboard-loading-meter-bar-3::after {
-  animation-delay: 0.36s;
+.dashboard-loading-outer-circle,
+.dashboard-loading-vertical-ellipse,
+.dashboard-loading-horizontal-ellipse,
+.dashboard-loading-inner-dot {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.15;
 }
 
-.dashboard-loading-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 20px;
+.dashboard-loading-inner-dot {
+  fill: color-mix(in srgb, var(--surface) 80%, transparent);
 }
 
-.dashboard-loading-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, var(--surface));
-  border-radius: 999px;
-  background: rgba(255,255,255,0.6);
-  color: color-mix(in srgb, var(--ink) 82%, var(--surface));
-  font-size: 12.5px;
-  font-weight: 500;
-  animation: dashboard-loading-pulse 1.9s ease-in-out infinite;
-}
-
-.dashboard-loading-step-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--healthy) 74%, var(--brand)));
-  box-shadow: 0 0 0 4px rgba(26,92,58,0.08);
-}
-
-.dashboard-loading-note {
-  margin-top: 24px;
+.dashboard-loading-caption {
+  margin: 0;
   color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-@keyframes dashboard-loading-float {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-10px, 10px, 0) scale(1.03); }
-}
-
-@keyframes dashboard-loading-meter {
-  0%, 100% { transform: scaleX(0.42); opacity: 0.55; }
-  50% { transform: scaleX(1); opacity: 1; }
-}
-
-@keyframes dashboard-loading-pulse {
-  0%, 100% { transform: translateY(0); opacity: 0.82; }
-  50% { transform: translateY(-1px); opacity: 1; }
+@keyframes dashboard-loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .simple-board {
@@ -1528,7 +1399,6 @@ body {
     border-right: 0;
   }
 
-  .dashboard-loading-meter,
   .simple-action-groups,
   .simple-detail-layout,
   .terminal-grid {
@@ -1594,26 +1464,8 @@ body {
     min-height: auto;
   }
 
-  .dashboard-loading-card {
-    padding: 28px 22px;
-    border-radius: 22px;
-  }
-
-  .dashboard-loading-copy {
-    margin-top: 24px;
-  }
-
-  .dashboard-loading-copy p {
-    font-size: 14px;
-  }
-
-  .dashboard-loading-steps {
-    gap: 10px;
-  }
-
-  .dashboard-loading-step {
-    width: 100%;
-    justify-content: flex-start;
+  .dashboard-loading-mark {
+    width: min(62vw, 190px);
   }
 
   .topbar {

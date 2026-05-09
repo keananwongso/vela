@@ -1,59 +1,40 @@
-import Image from 'next/image';
-
-const SYNC_STEPS = ['Spot price feed', 'Regional NDVI pass', 'Weather signal proxy'];
-
 export default function DashboardLoadingState() {
   return (
     <section className="dashboard-loading-shell" aria-label="Loading dashboard data" aria-busy="true">
-      <div className="dashboard-loading-card">
-        <div className="dashboard-loading-orb" aria-hidden="true" />
-        <div className="dashboard-loading-head">
-          <span className="dashboard-loading-kicker">Live procurement workspace</span>
-          <div className="dashboard-loading-brand">
-            <Image
-              src="/logo.png"
-              alt="Vela"
-              width={40}
-              height={40}
-              className="dashboard-loading-logo"
+      <div className="dashboard-loading-mark-wrap">
+        <svg
+          className="dashboard-loading-mark"
+          viewBox="0 0 240 240"
+          role="img"
+          aria-label="Vela loading"
+        >
+          <defs>
+            <path
+              id="vela-loading-circle"
+              d="
+                M 120,120
+                m -72,0
+                a 72,72 0 1,1 144,0
+                a 72,72 0 1,1 -144,0
+              "
             />
-            <div>
-              <div className="dashboard-loading-wordmark">Vela</div>
-              <div className="dashboard-loading-version">Riau operating snapshot</div>
-            </div>
-          </div>
-        </div>
+          </defs>
 
-        <div className="dashboard-loading-copy">
-          <h1>Preparing this week&apos;s procurement snapshot</h1>
-          <p>
-            Syncing the latest CPO market read, environmental signals, and district recommendations
-            before the dashboard opens.
-          </p>
-        </div>
+          <text className="dashboard-loading-ring-text">
+            <textPath href="#vela-loading-circle" startOffset="0%">
+              VELA PROCUREMENT SIGNAL ENGINE VELA PROCUREMENT SIGNAL ENGINE
+            </textPath>
+          </text>
 
-        <div className="dashboard-loading-meter" aria-hidden="true">
-          <span className="dashboard-loading-meter-bar dashboard-loading-meter-bar-1" />
-          <span className="dashboard-loading-meter-bar dashboard-loading-meter-bar-2" />
-          <span className="dashboard-loading-meter-bar dashboard-loading-meter-bar-3" />
-        </div>
+          <g className="dashboard-loading-center-mark" aria-hidden="true">
+            <circle cx="120" cy="120" r="40" className="dashboard-loading-outer-circle" />
+            <ellipse cx="120" cy="120" rx="24" ry="40" className="dashboard-loading-vertical-ellipse" />
+            <ellipse cx="120" cy="120" rx="40" ry="24" className="dashboard-loading-horizontal-ellipse" />
+            <circle cx="120" cy="120" r="14" className="dashboard-loading-inner-dot" />
+          </g>
+        </svg>
 
-        <div className="dashboard-loading-steps" aria-hidden="true">
-          {SYNC_STEPS.map((step, index) => (
-            <div
-              key={step}
-              className="dashboard-loading-step"
-              style={{ animationDelay: `${index * 0.18}s` }}
-            >
-              <span className="dashboard-loading-step-dot" />
-              <span>{step}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="dashboard-loading-note">
-          First load can take a few seconds while the latest run is assembled on the backend.
-        </div>
+        <p className="dashboard-loading-caption">Preparing this week&apos;s procurement snapshot</p>
       </div>
     </section>
   );
