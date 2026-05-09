@@ -46,7 +46,7 @@ function formatUpdatedAt(value: string) {
 
 export default function PricesPage() {
   const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8w');
-  const { prices, freshness } = useDashboardData();
+  const { prices } = useDashboardData();
   const series = prices.series;
   const priceSeriesMeta = getPriceSeriesMeta(series);
 
@@ -57,9 +57,6 @@ export default function PricesPage() {
   const weeksToShow = WEEKS_BY_TAB[chartTab];
   const visibleSeries = series.slice(-Math.min(weeksToShow, series.length));
   const showingAllAvailable = weeksToShow > series.length;
-  const partialFreshnessMessage = freshness.isPartial
-    ? `CPO price is current as of ${formatUpdatedAt(prices.lastUpdated)}, but district signals are only partially updated (${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh).`
-    : null;
 
   function exportPriceSeries() {
     const snapshotRows: Array<Array<string | number>> = [
@@ -72,7 +69,6 @@ export default function PricesPage() {
       ['History window', priceSeriesMeta.historyLabel],
       ['Chart tab', chartTab],
       ['Showing all available data', showingAllAvailable ? 'yes' : 'no'],
-      ['District signal sync', freshness.isPartial ? `${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh` : 'complete'],
       [],
       [priceSeriesMeta.periodLabel, `Price (${prices.unit})`, 'WoW change', 'WoW change (%)', 'Signal', 'Timestamp'],
       ...series.map((point, index) => {
@@ -117,13 +113,6 @@ export default function PricesPage() {
           <button className="btn" type="button" onClick={exportPriceSeries}>Export CSV</button>
         </div>
       </div>
-
-      {partialFreshnessMessage ? (
-        <div className="sync-alert" role="status">
-          <strong>Partial district sync</strong>
-          <span>{partialFreshnessMessage}</span>
-        </div>
-      ) : null}
 
       <div className="kpi-row">
         <div className="kpi">

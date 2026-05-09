@@ -343,30 +343,6 @@ body {
   outline-offset: 2px;
 }
 
-.sync-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--monitor) 24%, var(--border));
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--monitor) 8%, var(--surface));
-  color: color-mix(in srgb, var(--ink) 90%, var(--surface));
-  box-shadow: var(--shadow-card);
-}
-.sync-alert strong {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.sync-alert span {
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .simple-board {
   display: grid;
   gap: 18px;
