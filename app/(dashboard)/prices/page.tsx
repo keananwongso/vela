@@ -15,6 +15,21 @@ function fmt(n: number) {
   return n.toLocaleString('en-US');
 }
 
+function escapeCsvCell(value: string | number) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function formatExportDate(value: string) {
+  const date = new Date(value);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(safeDate);
+}
+
 function formatUpdatedAt(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unknown';
@@ -46,6 +61,50 @@ export default function PricesPage() {
     ? `CPO price is current as of ${formatUpdatedAt(prices.lastUpdated)}, but district signals are only partially updated (${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh).`
     : null;
 
+  function exportPriceSeries() {
+    const snapshotRows: Array<Array<string | number>> = [
+      ['Commodity', prices.commodity.toUpperCase()],
+      ['Province', prices.province],
+      ['Unit', prices.unit],
+      ['Current price', `${fmt(cur.price)} ${prices.unit}`],
+      ['Last updated', prices.lastUpdated],
+      ['Reference average', `${fmt(Math.round(referenceAvg))} ${prices.unit}`],
+      ['History window', priceSeriesMeta.historyLabel],
+      ['Chart tab', chartTab],
+      ['Showing all available data', showingAllAvailable ? 'yes' : 'no'],
+      ['District signal sync', freshness.isPartial ? `${freshness.freshRegionCount}/${freshness.expectedRegionCount} fresh` : 'complete'],
+      [],
+      [priceSeriesMeta.periodLabel, `Price (${prices.unit})`, 'WoW change', 'WoW change (%)', 'Signal', 'Timestamp'],
+      ...series.map((point, index) => {
+        const previousPoint = index > 0 ? series[index - 1] : point;
+        const delta = index > 0 ? point.price - previousPoint.price : 0;
+        const pct = index > 0 ? (delta / previousPoint.price) * 100 : 0;
+        const favorable = point.price >= referenceAvg;
+
+        return [
+          point.week,
+          fmt(point.price),
+          index === 0 ? '—' : `${delta >= 0 ? '+' : '-'}${fmt(Math.abs(delta))}`,
+          index === 0 ? '—' : `${pct.toFixed(1)}%`,
+          favorable ? 'Favorable' : 'Caution',
+          point.timestamp ?? '—',
+        ];
+      }),
+    ];
+    const csv = snapshotRows
+      .map((row) => row.map((cell) => escapeCsvCell(cell)).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `vela-prices-${formatExportDate(prices.lastUpdated)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
       <div className="topbar">
@@ -55,7 +114,7 @@ export default function PricesPage() {
           <div className="page-sub">Live commodity feeds, weekly history, and trend analysis</div>
         </div>
         <div className="topbar-actions">
-          <button className="btn">Export CSV</button>
+          <button className="btn" type="button" onClick={exportPriceSeries}>Export CSV</button>
         </div>
       </div>
 
