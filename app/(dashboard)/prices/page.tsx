@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useDashboardData } from '@/components/dashboard-data-provider';
 import PriceChart from '@/components/chart';
+import type { CpoPoint } from '@/lib/dashboard-types';
 import { getPriceSeriesMeta } from '@/lib/price-window';
 
-const CHART_TABS = ['4w', '8w'] as const;
-const WEEKS_BY_TAB: Record<(typeof CHART_TABS)[number], number> = {
-  '4w': 4,
-  '8w': 8,
+const CHART_TABS = ['4d', '8d'] as const;
+const DAYS_BY_TAB: Record<(typeof CHART_TABS)[number], number> = {
+  '4d': 4,
+  '8d': 8,
 };
 
 function fmt(n: number) {
@@ -44,19 +45,58 @@ function formatUpdatedAt(value: string) {
   });
 }
 
+function getPointDateKey(point: CpoPoint) {
+  if (!point.timestamp) return point.week;
+
+  const date = new Date(point.timestamp);
+  if (Number.isNaN(date.getTime())) return point.week;
+
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(date);
+}
+
+function getPointTime(point: CpoPoint) {
+  if (!point.timestamp) return null;
+
+  const time = new Date(point.timestamp).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+function dedupeSeriesByDate(series: CpoPoint[]) {
+  const pointsByDate = new Map<string, { point: CpoPoint; time: number | null; index: number }>();
+
+  series.forEach((point, index) => {
+    const dateKey = getPointDateKey(point);
+    const time = getPointTime(point);
+    const current = pointsByDate.get(dateKey);
+
+    if (!current || (time ?? index) >= (current.time ?? current.index)) {
+      pointsByDate.set(dateKey, { point, time, index });
+    }
+  });
+
+  return [...pointsByDate.values()]
+    .sort((a, b) => (a.time ?? a.index) - (b.time ?? b.index))
+    .map(({ point }) => point);
+}
+
 export default function PricesPage() {
-  const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8w');
+  const [chartTab, setChartTab] = useState<(typeof CHART_TABS)[number]>('8d');
   const { prices } = useDashboardData();
-  const series = prices.series;
+  const series = dedupeSeriesByDate(prices.series);
   const priceSeriesMeta = getPriceSeriesMeta(series);
 
   const cur = series[series.length - 1];
   const referenceWindow = Math.min(priceSeriesMeta.referencePeriods, series.length);
   const referenceAvg = series.slice(-referenceWindow).reduce((s, p) => s + p.price, 0) / Math.max(referenceWindow, 1);
-  const last8avg = series.reduce((s, p) => s + p.price, 0) / series.length;
-  const weeksToShow = WEEKS_BY_TAB[chartTab];
-  const visibleSeries = series.slice(-Math.min(weeksToShow, series.length));
-  const showingAllAvailable = weeksToShow > series.length;
+  const last8avg = series.slice(-8).reduce((s, p) => s + p.price, 0) / Math.min(8, series.length);
+  const daysToShow = DAYS_BY_TAB[chartTab];
+  const visibleSeries = series.slice(-Math.min(daysToShow, series.length));
+  const showingAllAvailable = daysToShow > series.length;
 
   function exportPriceSeries() {
     const snapshotRows: Array<Array<string | number>> = [
@@ -70,7 +110,7 @@ export default function PricesPage() {
       ['Chart tab', chartTab],
       ['Showing all available data', showingAllAvailable ? 'yes' : 'no'],
       [],
-      [priceSeriesMeta.periodLabel, `Price (${prices.unit})`, 'WoW change', 'WoW change (%)', 'Signal', 'Timestamp'],
+      [priceSeriesMeta.periodLabel, `Price (${prices.unit})`, 'Daily change', 'Daily change (%)', 'Signal', 'Timestamp'],
       ...series.map((point, index) => {
         const previousPoint = index > 0 ? series[index - 1] : point;
         const delta = index > 0 ? point.price - previousPoint.price : 0;
@@ -107,7 +147,7 @@ export default function PricesPage() {
         <div>
           <div className="crumb">CPO spot · Dumai port</div>
           <h1 className="page-title">Prices</h1>
-          <div className="page-sub">Live commodity feeds, weekly history, and trend analysis</div>
+          <div className="page-sub">Live commodity feeds, daily history, and trend analysis</div>
         </div>
         <div className="topbar-actions">
           <button className="btn" type="button" onClick={exportPriceSeries}>Export CSV</button>
@@ -126,14 +166,14 @@ export default function PricesPage() {
           <div className="delta flat">trailing window</div>
         </div>
         <div className="kpi">
-          <div className="label">8-week average</div>
+          <div className="label">8-day average</div>
           <div className="val mono">{fmt(Math.round(last8avg))}<span className="unit">IDR/kg</span></div>
           <div className="delta up">▲ trending up</div>
         </div>
         <div className="kpi">
           <div className="label">FFB reference</div>
           <div className="val mono">{fmt(prices.ffbReference)}<span className="unit">IDR/kg</span></div>
-          <div className="delta up">▲ 0.4% WoW</div>
+          <div className="delta up">▲ 0.4% daily</div>
         </div>
       </div>
 
@@ -176,7 +216,7 @@ export default function PricesPage() {
               <tr>
                 <th>{priceSeriesMeta.periodLabel}</th>
                 <th>Price (IDR/kg)</th>
-                <th>WoW change</th>
+                <th>Daily change</th>
                 <th>Signal</th>
               </tr>
             </thead>
@@ -187,7 +227,7 @@ export default function PricesPage() {
                 const pct = i > 0 ? (delta / prev) * 100 : 0;
                 const favorable = p.price >= referenceAvg;
                 return (
-                  <tr key={p.week} className={p.current ? 'row-selected' : ''}>
+                  <tr key={`${getPointDateKey(p)}-${p.timestamp ?? i}`} className={p.current ? 'row-selected' : ''}>
                     <td style={{ fontWeight: p.current ? 600 : 500 }}>
                       {p.week}
                       {p.current && (

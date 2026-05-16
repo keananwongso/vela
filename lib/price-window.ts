@@ -8,7 +8,7 @@ function hasTimestamp(value: string | undefined) {
 
 export function getPriceSeriesMeta(series: CpoPoint[]) {
   const hasFullTimestamps = series.every((point) => hasTimestamp(point.timestamp));
-  const isDailyWindow = hasFullTimestamps && series.length <= 7;
+  const isDailyWindow = hasFullTimestamps;
   const referencePeriods = isDailyWindow ? series.length : Math.min(4, series.length);
 
   return {

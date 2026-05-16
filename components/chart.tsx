@@ -17,6 +17,45 @@ function fmt(n: number) {
   return n.toLocaleString('en-US');
 }
 
+function getPointDateKey(point: CpoPoint) {
+  if (!point.timestamp) return point.week;
+
+  const date = new Date(point.timestamp);
+  if (Number.isNaN(date.getTime())) return point.week;
+
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(date);
+}
+
+function getPointTime(point: CpoPoint) {
+  if (!point.timestamp) return null;
+
+  const time = new Date(point.timestamp).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+function dedupeSeriesByDate(series: CpoPoint[]) {
+  const pointsByDate = new Map<string, { point: CpoPoint; time: number | null; index: number }>();
+
+  series.forEach((point, index) => {
+    const dateKey = getPointDateKey(point);
+    const time = getPointTime(point);
+    const current = pointsByDate.get(dateKey);
+
+    if (!current || (time ?? index) >= (current.time ?? current.index)) {
+      pointsByDate.set(dateKey, { point, time, index });
+    }
+  });
+
+  return [...pointsByDate.values()]
+    .sort((a, b) => (a.time ?? a.index) - (b.time ?? b.index))
+    .map(({ point }) => point);
+}
+
 function niceStep(roughStep: number) {
   const exponent = 10 ** Math.floor(Math.log10(roughStep));
   const fraction = roughStep / exponent;
@@ -90,10 +129,11 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
     );
   }
 
-  const { xFn, yFn, linePath, areaPath, ticks, referenceAvg, current, wowDelta, wowPct, favorable, slope, intercept, n, seriesMeta, hasTrendLine } = buildChart(series);
+  const chartSeries = dedupeSeriesByDate(series);
+  const { xFn, yFn, linePath, areaPath, ticks, referenceAvg, current, wowDelta, wowPct, favorable, slope, intercept, n, seriesMeta, hasTrendLine } = buildChart(chartSeries);
   const showingAverageTooltip = isAverageHovered && hoveredIndex === null;
-  const activeIndex = hoveredIndex ?? (series.length - 1);
-  const activePoint = series[activeIndex];
+  const activeIndex = hoveredIndex ?? (chartSeries.length - 1);
+  const activePoint = chartSeries[activeIndex];
   const activeX = xFn(activeIndex);
   const activeY = yFn(activePoint.price);
   const tooltipWidth = 92;
@@ -122,7 +162,7 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
             <div className="price">{fmt(current.price)}</div>
             <div className="unit">IDR/kg</div>
             <div className={`delta ${wowDelta >= 0 ? 'up' : 'down'}`}>
-              {wowDelta >= 0 ? '▲' : '▼'} {fmt(Math.abs(wowDelta))} ({wowPct.toFixed(1)}%) WoW
+              {wowDelta >= 0 ? '▲' : '▼'} {fmt(Math.abs(wowDelta))} ({wowPct.toFixed(1)}%) daily
             </div>
             <span className={`badge ${favorable ? 'green' : 'amber'}`} style={{ marginLeft: 6 }}>
               <span className="dot" />
@@ -136,7 +176,7 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
             <span style={{ color: favorable ? 'var(--healthy)' : 'var(--monitor)', fontWeight: 500 }}>
               {favorable ? 'above' : 'below'}
             </span>
-            {' '}the {seriesMeta.isDailyWindow ? `${seriesMeta.referencePeriods}-day` : '4-week'} mean → {favorable ? 'good window to dispatch' : 'consider holding'}
+            {' '}the {seriesMeta.averageLabelLong.replace(' average', '')} mean → {favorable ? 'good window to dispatch' : 'consider holding'}
           </div>
         </div>
         <div className="chart-legend">
@@ -218,8 +258,8 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
           stroke="var(--healthy)" strokeOpacity="0.25" strokeDasharray="2 3"
         />
 
-        {series.map((p, i) => (
-          <g key={p.week}>
+        {chartSeries.map((p, i) => (
+          <g key={`${getPointDateKey(p)}-${p.timestamp ?? i}`}>
             <circle
               cx={xFn(i)} cy={yFn(p.price)}
               r={i === activeIndex ? 5 : 3}
@@ -242,9 +282,9 @@ export default function PriceChart({ series }: { series: CpoPoint[] }) {
           </text>
         </g>
 
-        {series.map((p, i) => (
+        {chartSeries.map((p, i) => (
           <text
-            key={`x-${p.week}`}
+            key={`x-${getPointDateKey(p)}`}
             x={xFn(i)} y={H - 10}
             textAnchor="middle" fontSize="11"
             fill={i === activeIndex ? 'var(--ink)' : 'var(--muted)'}

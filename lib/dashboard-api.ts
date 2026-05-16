@@ -96,6 +96,15 @@ function formatDayLabel(value: Date) {
   }).format(value);
 }
 
+function formatDateKey(value: Date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(value);
+}
+
 function getRecentSeriesWindow(points: ApiPricePoint[]) {
   const enriched = points
     .map((point) => {
@@ -301,46 +310,51 @@ function normalizeLivePricePoints(points: ApiPricePoint[]) {
         week: point.week,
         price: point.price,
         date,
+        dateKey: formatDateKey(date),
       };
     })
-    .filter((point): point is ApiPricePoint & { date: Date } => point !== null)
+    .filter((point): point is ApiPricePoint & { date: Date; dateKey: string } => point !== null)
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
+function dedupePricePointsByDate(points: Array<ApiPricePoint & { date: Date; dateKey: string }>) {
+  const pointsByDate = new Map<string, ApiPricePoint & { date: Date; dateKey: string }>();
+
+  for (const point of points) {
+    const current = pointsByDate.get(point.dateKey);
+    if (!current || point.date.getTime() >= current.date.getTime()) {
+      pointsByDate.set(point.dateKey, point);
+    }
+  }
+
+  return [...pointsByDate.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 function buildMergedRecentPriceSeries(livePoints: ApiPricePoint[]) {
-  const recentLiveSeries = normalizeLivePricePoints(getRecentSeriesWindow(livePoints));
+  const recentLiveSeries = dedupePricePointsByDate(normalizeLivePricePoints(getRecentSeriesWindow(livePoints)));
   if (!recentLiveSeries.length) return [];
 
   if (recentLiveSeries.length >= CPO_RECENT_BACKFILL_SERIES.length) {
-    return recentLiveSeries.map(({ date: _date, ...point }) => point);
+    return recentLiveSeries.map(({ date: _date, dateKey: _dateKey, ...point }) => point);
   }
 
-  const mergedByTimestamp = new Map(
-    CPO_RECENT_BACKFILL_SERIES
-      .filter((point) => point.timestamp)
-      .map((point) => [
-        point.timestamp as string,
-        {
+  const fallbackSeries = CPO_RECENT_BACKFILL_SERIES
+    .map((point) => {
+      const date = parseTimestamp(point.timestamp);
+      return date
+        ? {
           timestamp: point.timestamp as string,
           week: point.week,
           price: point.price,
-        },
-      ]),
-  );
+          date,
+          dateKey: formatDateKey(date),
+        }
+        : null;
+    })
+    .filter((point): point is ApiPricePoint & { date: Date; dateKey: string } => point !== null);
 
-  for (const point of recentLiveSeries) {
-    mergedByTimestamp.set(point.timestamp, {
-      timestamp: point.timestamp,
-      week: point.week,
-      price: point.price,
-    });
-  }
-
-  return [...mergedByTimestamp.values()].sort((a, b) => {
-    const aTime = parseTimestamp(a.timestamp)?.getTime() ?? Number.NEGATIVE_INFINITY;
-    const bTime = parseTimestamp(b.timestamp)?.getTime() ?? Number.NEGATIVE_INFINITY;
-    return aTime - bTime;
-  });
+  return dedupePricePointsByDate([...fallbackSeries, ...recentLiveSeries])
+    .map(({ date: _date, dateKey: _dateKey, ...point }) => point);
 }
 
 function buildPriceSnapshot(apiPrices?: ApiPricesResponse): PriceSnapshot {
